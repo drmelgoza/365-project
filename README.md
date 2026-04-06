@@ -2,8 +2,8 @@
 
 **Contributors:**
 - Diego Melgoza (drmelgoz@calpoly.edu)
-- David Talivera-Dean ( )
+- David Talivera-Dean (datalave@calpoly.edu)
 - Vishal Murali Kannan (vmuralik@calpoly.edu)
-- Johnithan Resendiz ( )
+- Jonathan Resendiz (jresen03@calpoly.edu)
 
 **Description**
