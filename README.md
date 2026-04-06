@@ -1,4 +1,4 @@
-# CSC 365 Group Project: TITLE
+# CSC 365 Group Project: Nutrient Tracker
 
 **Contributors:**
 - Diego Melgoza (drmelgoz@calpoly.edu)
