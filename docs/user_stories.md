@@ -1,4 +1,4 @@
-# H1 User Stories:
+# User Stories:
 1. 
 2. 
 3. 
@@ -12,7 +12,7 @@
 11. 
 12. 
 
-# H1 Exceptions: 
+# Exceptions: 
 1. 
 2. 
 3. 
