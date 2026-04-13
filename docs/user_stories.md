@@ -10,8 +10,7 @@
 9. As an athlete, I want to identify the needed macromolecule intake for my weight and height so that I can build my nutrition around bulking or cutting.
 10. As the family grocery-shopper, I want to easily store and access a list of all of our favorite meals and their needed ingredients, so that I can keep myself organized while I shop.
 11. As a sugar addict, I want to view warnings that display high-sugar content for a meal I am planning, so that I can avoid exceeding my personal sugar limit.
-12. As a researcher, I want to be able to study how different foods that I eat affect me and be able to provide the public acturate information on different foods and how they affect us.
-13. As a coach, I want to have an easy way to see how certian diets have their affect so I can give the best advice on what my team should eat so it will improve them as they growth in their sport.
+12. As a coach, I want to have an easy way to see how certian diets have their affect so I can give the best advice on what my team should eat so it will improve them as they growth in their sport.
 
 # Exceptions: 
 1. A user enters a negative value for any nutrient; system would reject the entry and ask a positive number.
