@@ -1,7 +1,7 @@
 # User Stories:
 1. As an health-conscious user, I want to log my meal with specific carb, protein, and fat values so that I can have an accurate record of my nutrition intake.
 2. As a busy individual, I want to track the time I eat my meals so that I can prevent eating late.
-3. As a macro-conscious user, I want to filter my recorded meals based on my nutrition density so that I can view which meals contribute to my goals.
+3. As a macro-conscious user, I want to filter my recorded meals based on my nutrition density so that I can view which of my recorded meals contribute to my goals.
 4. As a gym rat trying to build muscle, I want to log my protein intake and find meals with the highest count of protein so that I can build muscle more efficiently.
 5. As a data scientist obsessed with data, I want to keep track of my meals and categorize them based on nutrients and times of day so that I can have my diet in an organized space.
 6. As a user with dietary restrictions, I want to set my restrictions and log meals and view warnings for restricted nutrients or ingredients, so that I can avoid unsafe foods. 
