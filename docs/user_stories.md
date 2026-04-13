@@ -7,10 +7,10 @@
 6. As a user with dietary restrictions, I want to set my restrictions and log meals and view warnings for restricted nutrients or ingredients, so that I can avoid unsafe foods. 
 7. As a supplement fanatic, I want to log vitamins and supplements and view how they contribute to my daily nutrient totals, so that I can avoid deficiencies or overdoses.
 8. As a budget-conscious user, I want to input the cost of foods I eat and view the nutritional value per dollar, so that I can eat healthily on a budget.
-9. As an athlete, I want to calculate and store the macromolecule intake goals for my weight and height so that I can build my nutrition around bulking or cutting.
+9. As an athlete, I want to calculate and store the macromolecule intake goals for my weight and height so that I can build my nutrition around bulking, cutting or other goals.
 10. As the family grocery-shopper, I want to easily store and access a list of all of our favorite meals and their needed ingredients, so that I can keep myself organized while I shop.
 11. As a sugar addict, I want to view warnings that display high-sugar content for a meal I am planning, so that I can avoid exceeding my personal sugar limit.
-12. As a person who likes attention-to-detail, I want to add personal notes onto a recorded meal, so that I can add extra context to my choices for review later.
+12. As a person who likes attention-to-detail, I want to add personal notes onto a recorded meal, so that I can add extra context to my choices for later review.
 
 # Exceptions: 
 1. A user enters a negative value for any nutrient; system would reject the entry and ask a positive number.
