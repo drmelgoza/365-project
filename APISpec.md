@@ -33,7 +33,7 @@ The API calls are made in this sequence when call
 2. 'Post User_body_info'
 3. 'Post User_Id'
 
-## 7. Rest_data
+## 7. Restset_data
 1. 'Delect Data'
 2. 'Delect User_name'
 3. 'Delect User_body_info'
