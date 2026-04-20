@@ -1,103 +1,208 @@
 # API Specification for Data-Fit
 
-## 1. User Profiles
+### 1. Profiles
 
-### 1.1. New Profile - `/profiles/` (POST)
 
-Create a new profile for a user. Profiles will store information about user fitness measurements.
+## 1.1 Create Profile
+POST /profiles
+Create a new user profile.
+Request
+{
+  "profile_name": "John",
+  "age": 25,
+  "weight": 70,
+  "height": 175
+}
+Response
+{
+  "profile_id": "p123"
+}
 
-**Request**:
 
-```json
-[
-  {
-    "profile_name": "string",
-    "age": "number",
-    "weight": "number",
-    "height": "number"
-  }
-]
-```
+## 1.2 Get Profile
+GET /profiles/{profile_id}
+Retrieve profile information.
+Response
+{
+  "profile_id": "p123",
+  "profile_name": "John",
+  "age": 25,
+  "weight": 70,
+  "height": 175
+}
+### 2. Agendas
 
-**Response**:
 
-```json
-[
-  {
-    "profile_id": "string"
-  }
-]
-```
+## 2.1 Create Agenda
+POST /agendas
+Create a new agenda for a user.
+Request
+{
+  "profile_id": "p123"
+}
+Response
+{
+  "agenda_id": "a456"
+}
 
-## 2. User Agendas
 
-### 2.1: New User Agenda - `/agendas/` (POST)
+## 2.2 Add Goal to Agenda
+PUT /agendas/{agenda_id}/goals
+Add a goal to the agenda.
+Request
+{
+  "nutrient_name": "protein",
+  "nutrient_quantity": 100,
+  "nutrient_unit": "g",
+  "nutrient_frequency": 1,
+  "nutrient_freq_unit": "day"
+}
+Response
+{
+  "success": true
+}
 
-Create a new list of goals, called an agenda, to be tracked for a user. Agenda will initially be empty.
 
-**Request**:
+## 2.3 Get Goals for Agenda
+GET /agendas/{agenda_id}/goals
+Retrieve all goals in a user’s agenda.
+Response
+{
+  "goals": [
+    {
+      "nutrient_name": "protein",
+      "nutrient_quantity": 100,
+      "nutrient_unit": "g",
+      "nutrient_frequency": 1,
+      "nutrient_freq_unit": "day"
+    }
+  ]
+}
+### 3. Goals
 
-```json
-[
-  {
-    "profile_id": "string"
-  }
-]
-```
 
-**Response**:
+## 3.1 Create Goal
+POST /goals
+Create a goal independently (can later be added to an agenda).
+Request
+{
+  "nutrient_name": "fiber",
+  "nutrient_quantity": 30,
+  "nutrient_unit": "g",
+  "nutrient_frequency": 1,
+  "nutrient_freq_unit": "day"
+}
+Response
+{
+  "goal_id": "g789"
+}
 
-```json
-[
-  {
-    "agenda_id": "string"
-  }
-]
-```
 
-### 2.2: Add Goal to User Agenda - `/agendas/{agenda_id}/goals/{goal_id}` (PUT)
+## 3.2 Delete Goal
+DELETE /goals/{goal_id}
+Remove a goal.
+Response
+{
+  "success": true
+}
 
-Add a newly created goal to a user's agenda.
 
-**Request**:
+### 4. Tracking / Stats
 
-```json
-[
-  {
-    "nutrient_name": "string",
-    "nutrient_quantity": "number",
-    "nutrient_unit": "string",
-    "nutrient_frequency": "number",
-    "nutrient_freq_unit": "string"
-  }
-]
-```
 
-**Response**:
+## 4.1 Log Meal
+POST /meals
+Track a meal for a profile.
+Request
+{
+  "profile_id": "p123",
+  "meal_name": "Chicken Salad",
+  "calories": 400
+}
+Response
+{
+  "success": true
+}
 
-```json
-[
-  {
-    "success": "boolean"
-  }
-]
-```
+## 4.2 Get Stats
+GET /profiles/{profile_id}/stats
+Retrieve summary stats for a user.
+Response
+{
+  "total_calories": 1800,
+  "protein": "90g",
+  "status": "under goal"
+}
 
-### 2.3: Retrieve User Goal - `/goals/search` (GET)
+### 5 Example User Flows
 
-Get a goal from a user's agenda.
+## Flow 1: User Meeting Goals
+Summary:
+User checks progress and logs a status update to stay accountable.
+Steps:
+GET /goals
+GET /status
+POST /status
+Example Input:
+POST /status
+{
+  "user_id": "123",
+  "steps": 8000,
+  "calories_burned": 500
+}
+Example Output:
+{
+  "message": "Status updated successfully",
+  "progress": "80% of daily goal"
+}
+Motivation:
+Tracking progress helps users stay consistent and aware of their health habits.
 
-**Query Parameters**:
+## Flow 2: Meal Planning
+Summary:
+User generates a meal plan based on personal data and goals.
+Steps:
+GET /data
+GET /goals
+GET /health
+POST /meal-plan
+Example Input:
+POST /meal-plan
+{
+  "user_id": "123",
+  "diet": "vegetarian",
+  "calorie_target": 2000
+}
+Example Output:
+{
+  "breakfast": "Oatmeal with fruits",
+  "lunch": "Quinoa salad",
+  "dinner": "Vegetable stir fry"
+}
+Motivation:
+Personalized plans make it easier to stick to healthy eating habits.
 
-- `profile_id` (required): id for the user's profile
-- `nutrient_name` (optional): name of the nutrient in the user's goal
-
-**Response**:
-
-JSON object with nutrient information will be returned:
-
-- `nutrient_name`: The name of the found nutrient
-- `nutrient_quantity`: The quantity of the nutrient needed to fulfill the goal
-- `nutrient_unit`: The measurement unit for the nutrient (g, mg, etc.)
-- `nutrient_frequency`: The frequency at which the goal needs to be met
-- `nutrient_freq_unit`: The measurement unit for the nutrient frequency (day, week, etc.)
+## Flow 3: Meal Tracking & Summary
+Summary:
+User logs meals and later reviews insights.
+Steps:
+POST /meals
+POST /time
+POST /category
+GET /meals
+GET /stats
+Example Input:
+POST /meals
+{
+  "user_id": "123",
+  "meal": "Grilled chicken salad",
+  "calories": 400
+}
+Example Output:
+{
+  "total_calories": 1800,
+  "protein": "120g",
+  "status": "Within goal"
+}
+Motivation:
+Logging meals increases awareness and helps users improve nutrition over time.
