@@ -1,4 +1,4 @@
-# Summary on Meal
+# Summary on Meal Flow
 
 This flow allows users to view their logged meals, meal categories, and overall meal statistics. It helps users understand their eating habits and track nutritional trends over time.
 
