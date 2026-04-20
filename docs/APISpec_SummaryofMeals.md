@@ -141,8 +141,6 @@ This flow is used when a user logs a new meal into the system. The user submits 
 2. Assign Category to Meal
 3. Update Meal Time
 
----
-
 ## 1. Create Meal Log (POST)
 
 The user submits basic meal details (name and nutritional information).
@@ -173,8 +171,6 @@ The system creates a new meal record and returns a unique meal ID to identify it
 }
 ```
 
----
-
 ## 2. Assign Category to Meal (PUT)
 
 The user assigns a category (e.g., breakfast, lunch, dinner) to the created meal.
@@ -200,8 +196,6 @@ The system updates the meal with the selected category and confirms the change.
   "status":"updated"
 }
 ```
-
----
 
 ## 3. Update Meal Time (PUT)
 
