@@ -92,3 +92,84 @@ Returns summary statistics about the user’s meals, such as total meals, calori
   }
 }
 ```
+---
+
+# Meal Tracking (Log a Meal) Flow
+
+This flow is used when a user logs a new meal into the system. The user submits meal details, assigns a category, and records the time. This allows the system to store structured meal data for tracking and analysis.
+
+## Flow Order
+
+1. Create Meal Log
+2. Assign Category to Meal
+3. Update Meal Time
+
+## 1. Create Meal Log (POST)
+
+**Endpoint:** `/users/{userId}/meal-logs`
+
+### Input
+
+```json
+{
+  "name":"Grilled Chicken Salad",
+  "calories":450,
+  "protein":35,
+  "carbs":20,
+  "fat":15
+}
+```
+
+### Output
+
+```json
+{
+  "mealId":"m101",
+  "userId":"12345",
+  "status":"created"
+}
+``` 
+
+## 2. Assign Category to Meal (PUT)
+
+**Endpoint:** `/users/{userId}/meals/{mealId}/category`
+
+### Input
+
+```
+{
+  "category":"Lunch"
+}
+```
+
+### Output
+
+```json
+{
+  "mealId":"m101",
+  "category":"Lunch",
+  "status":"updated"
+}
+```
+
+## 3. Update Meal Time (PUT)
+
+**Endpoint:** `/users/{userId}/meals/{mealId}/time`
+
+### Input
+
+```json
+{
+  "time":"2026-04-20T12:30:00Z"
+}
+```
+
+### Output
+
+```json
+{
+  "mealId":"m101",
+  "time":"2026-04-20T12:30:00Z",
+  "status":"updated"
+}
+```
