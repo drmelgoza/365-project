@@ -1,75 +1,88 @@
-### 3 Example User Flows
+# 3 Example User Flows
 
-## Flow 1: User Meeting Goals
+## Flow 1: Profile Creation
 
-Summary:
-User checks progress and logs a status update to stay accountable.
-Steps:
-GET /goals
-GET /status
-POST /status
-Example Input:
-POST /status
-{
-"user_id": "123",
-"steps": 8000,
-"calories_burned": 500
-}
-Example Output:
-{
-"message": "Status updated successfully",
-"progress": "80% of daily goal"
-}
-Motivation:
-Tracking progress helps users stay consistent and aware of their health habits.
+### Scenario:
+Jonathan is a new user to DataFit, and wants to begin using the app
+to prepare for his martial arts tournament. To begin tracking his goals,
+he will first start by creating a profile.
 
-## Flow 2: Meal Planning
+### Steps:
+- go to `/profiles` to begin a new profile and retrieve the new profileid `1234`
+- then, go to `/profiles/1234` to view his profile and ensure its created
 
-Summary:
-User generates a meal plan based on personal data and goals.
-Steps:
-GET /data
-GET /goals
-GET /health
-POST /meal-plan
-Example Input:
-POST /meal-plan
-{
-"user_id": "123",
-"diet": "vegetarian",
-"calorie_target": 2000
-}
-Example Output:
-{
-"breakfast": "Oatmeal with fruits",
-"lunch": "Quinoa salad",
-"dinner": "Vegetable stir fry"
-}
-Motivation:
-Personalized plans make it easier to stick to healthy eating habits.
+## Flow 2: Meal Logging
 
-## Flow 3: Meal Tracking & Summary
+### Scenario:
+Joseph is has just begun using DataFit, and has just finished his breakfast for the day.
+To keep up with his protein goal, he must now add the meal into the DataFit meal log.
 
-Summary:
-User logs meals and later reviews insights.
-Steps:
-POST /meals
-POST /time
-POST /category
-GET /meals
-GET /stats
-Example Input:
-POST /meals
+### Steps:
+- using his userid, Joseph calls POST `users/4032/meal-logs` with the following info:
+```
 {
-"user_id": "123",
-"meal": "Grilled chicken salad",
-"calories": 400
+  "name": "Johnny's Family Omelette",
+  "calories": 450,
+  "protein": 35,
+  "carbs": 20,
+  "fat": 15
 }
-Example Output:
+```
+- Joseph then recieves the following output:
+```
 {
-"total_calories": 1800,
-"protein": "120g",
-"status": "Within goal"
+  "mealId": "m101",
+  "userId": "4032",
+  "status": "created"
 }
-Motivation:
-Logging meals increases awareness and helps users improve nutrition over time.
+```
+- Joseph wants to ensure the meal is considered a breakfast meal, so he calls `/users/4032/meals/m101/category` with the following info:
+```
+{
+  "category":"Lunch"
+}
+```
+- Finally, Joseph recieves the following output:
+```
+{
+  "mealId": "m101",
+  "category": "Lunch",
+  "status": "updated"
+}
+```
+
+
+## Flow 3: Meal Tracking
+
+### Scenario:
+Jolyne has been using DataFit for the first time today, and wants to see what her day's meals look like overall.
+
+### Steps:
+- Jolyne calls the following endpoint using her userId, `/users/12345/meals` resulting in:
+```
+{
+  "userId": "12345",
+  "meals": [
+    {
+      "mealId": "m2",
+      "name": "Grilled Chicken Salad",
+      "category": "Lunch",
+      "calories": 450,
+      "protein": 35,
+      "carbs": 20,
+      "fat": 15,
+      "time": "2026-04-20T12:30:00Z"
+    },
+    {
+      "mealId": "m1",
+      "name": "Oatmeal with Berries",
+      "category": "Breakfast",
+      "calories": 300,
+      "protein": 10,
+      "carbs": 50,
+      "fat": 5,
+      "time": "2026-04-20T08:00:00Z"
+    }
+  ]
+}
+```
