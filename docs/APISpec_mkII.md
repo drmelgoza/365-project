@@ -1,28 +1,52 @@
 # API Specification for Data-Fit
 
-### 1. Profiles
+# 1. Profiles
 
+Profiles allow users to begin using the app by creating a profile of health information.
+The health statistics can be used to help users make decisions about their meals
+and determine health goals.
 
-## 1.1 Create Profile
-POST /profiles
+## Flow Order
+
+1. Create Profile
+2. Get Profile
+
+## 1.1 Create Profile (POST)
+
+### Endpoint: `/profiles`
+
 Create a new user profile.
-Request
-{
-  "profile_name": "John",
-  "age": 25,
-  "weight": 70,
-  "height": 175
-}
-Response
+
+### Request
+
+```json
+[
+  {
+    "profile_name": "John",
+    "age": 25,
+    "weight": 70,
+    "height": 175
+  }
+]
+```
+
+### Response
+
+```json
 {
   "profile_id": "p123"
 }
+```
 
+## 1.2 Get Profile (GET)
 
-## 1.2 Get Profile
-GET /profiles/{profile_id}
+### Endpoint: `/profiles/{profile_id}`
+
 Retrieve profile information.
-Response
+
+### Response
+
+```json
 {
   "profile_id": "p123",
   "profile_name": "John",
@@ -30,26 +54,52 @@ Response
   "weight": 70,
   "height": 175
 }
-### 2. Agendas
+```
 
+# 2. Agendas
 
-## 2.1 Create Agenda
-POST /agendas
+Agendas are created as an organized list of goals for the user.
+Users will use agenda goals to determine if the meals they are tracking are
+benefitting their health goals.
+
+## Flow Order
+
+1. Create Agenda
+2. Add Agenda Goal
+3. Get Agenda Goals
+4. Delete Agenda Goals (as needed)
+
+## 2.1 Create Agenda (POST)
+
+### Endpoint: `/agendas`
+
 Create a new agenda for a user.
-Request
+
+### Request
+
+```json
 {
   "profile_id": "p123"
 }
-Response
+```
+
+### Response
+
+```json
 {
   "agenda_id": "a456"
 }
+```
 
+## 2.2 Add Goal to Agenda (PUT)
 
-## 2.2 Add Goal to Agenda
-PUT /agendas/{agenda_id}/goals
+### Endpoint: `/agendas/{agenda_id}/goals`
+
 Add a goal to the agenda.
-Request
+
+### Request
+
+```json
 {
   "nutrient_name": "protein",
   "nutrient_quantity": 100,
@@ -57,16 +107,25 @@ Request
   "nutrient_frequency": 1,
   "nutrient_freq_unit": "day"
 }
-Response
+```
+
+### Response
+
+```json
 {
   "success": true
 }
+```
 
+## 2.3 Get Goals for Agenda (GET)
 
-## 2.3 Get Goals for Agenda
-GET /agendas/{agenda_id}/goals
+### Endpoint: `/agendas/{agenda_id}/goals`
+
 Retrieve all goals in a user’s agenda.
-Response
+
+### Response
+
+```json
 {
   "goals": [
     {
@@ -78,131 +137,228 @@ Response
     }
   ]
 }
-### 3. Goals
+```
 
+## 2.4 Delete Goal from Agenda (DELETE)
 
-## 3.1 Create Goal
-POST /goals
-Create a goal independently (can later be added to an agenda).
-Request
-{
-  "nutrient_name": "fiber",
-  "nutrient_quantity": 30,
-  "nutrient_unit": "g",
-  "nutrient_frequency": 1,
-  "nutrient_freq_unit": "day"
-}
-Response
-{
-  "goal_id": "g789"
-}
+### Endpoint: `/agendas/{agenda_id}/goals/{goal_id}`
 
+Remove a goal from a users agenda.
 
-## 3.2 Delete Goal
-DELETE /goals/{goal_id}
-Remove a goal.
-Response
+### Response
+
+```json
 {
   "success": true
 }
+```
 
+# 3. Meal Logging
 
-### 4. Tracking / Stats
+This set of endpoints is used when a user logs a new meal into the system. The user submits meal details, assigns a category, and records the time. This allows the system to store structured meal data for tracking and analysis.
 
+## Flow Order
 
-## 4.1 Log Meal
-POST /meals
-Track a meal for a profile.
-Request
-{
-  "profile_id": "p123",
-  "meal_name": "Chicken Salad",
-  "calories": 400
-}
-Response
-{
-  "success": true
-}
+1. Create Meal Log
+2. Assign Category to Meal
+3. Update Meal Time
 
-## 4.2 Get Stats
-GET /profiles/{profile_id}/stats
-Retrieve summary stats for a user.
-Response
-{
-  "total_calories": 1800,
-  "protein": "90g",
-  "status": "under goal"
-}
+## 3.1 Create Meal Log (POST)
 
-### 5 Example User Flows
+**Endpoint:** `/users/{userId}/meal-logs`
 
-## Flow 1: User Meeting Goals
-Summary:
-User checks progress and logs a status update to stay accountable.
-Steps:
-GET /goals
-GET /status
-POST /status
-Example Input:
-POST /status
-{
-  "user_id": "123",
-  "steps": 8000,
-  "calories_burned": 500
-}
-Example Output:
-{
-  "message": "Status updated successfully",
-  "progress": "80% of daily goal"
-}
-Motivation:
-Tracking progress helps users stay consistent and aware of their health habits.
+The user submits basic meal details (name and nutritional information).
+The system creates a new meal record and returns a unique meal ID to identify it.
 
-## Flow 2: Meal Planning
-Summary:
-User generates a meal plan based on personal data and goals.
-Steps:
-GET /data
-GET /goals
-GET /health
-POST /meal-plan
-Example Input:
-POST /meal-plan
-{
-  "user_id": "123",
-  "diet": "vegetarian",
-  "calorie_target": 2000
-}
-Example Output:
-{
-  "breakfast": "Oatmeal with fruits",
-  "lunch": "Quinoa salad",
-  "dinner": "Vegetable stir fry"
-}
-Motivation:
-Personalized plans make it easier to stick to healthy eating habits.
+### Input
 
-## Flow 3: Meal Tracking & Summary
-Summary:
-User logs meals and later reviews insights.
-Steps:
-POST /meals
-POST /time
-POST /category
-GET /meals
-GET /stats
-Example Input:
-POST /meals
+```json
 {
-  "user_id": "123",
-  "meal": "Grilled chicken salad",
-  "calories": 400
+  "name": "Grilled Chicken Salad",
+  "calories": 450,
+  "protein": 35,
+  "carbs": 20,
+  "fat": 15
 }
-Example Output:
+```
+
+### Output
+
+```json
 {
-  "total_calories": 1800,
-  "protein": "120g",
-  "status": "Within goal"
+  "mealId": "m101",
+  "userId": "12345",
+  "status": "created"
 }
-Motivation:
-Logging meals increases awareness and helps users improve nutrition over time.
+```
+
+## 3.2 Assign Category to Meal (PUT)
+
+**Endpoint:** `/users/{userId}/meals/{mealId}/category`
+
+The user assigns a category (e.g., breakfast, lunch, dinner) to the created meal.
+The system updates the meal with the selected category and confirms the change.
+
+### Input
+
+```
+{
+  "category":"Lunch"
+}
+```
+
+### Output
+
+```json
+{
+  "mealId": "m101",
+  "category": "Lunch",
+  "status": "updated"
+}
+```
+
+## 3.3 Update Meal Time (PUT)
+
+**Endpoint:** `/users/{userId}/meals/{mealId}/time`
+
+The user records the time the meal was consumed.
+The system updates the meal with the provided timestamp and confirms the update.
+
+### Input
+
+```json
+{
+  "time": "2026-04-20T12:30:00Z"
+}
+```
+
+### Output
+
+```json
+{
+  "mealId": "m101",
+  "time": "2026-04-20T12:30:00Z",
+  "status": "updated"
+}
+```
+
+# 4. Meals Tracking
+
+This set of endpoints is used when a user wants to review their meal information in the app. The user first retrieves their logged meals, then views the meal categories those entries fall under, and finally checks overall meal statistics. This helps the user understand their eating habits and track nutrition over time.
+
+## Flow Order
+
+1. Get Meals
+2. Get Categories
+3. Get Meal Stats
+
+## 4.1 Get Meals (GET)
+
+**Endpoint:** `/users/{userId}/meals`
+
+This endpoint is called when the user wants to see the meals they have logged.
+
+### Input
+
+```
+GET /users/12345/meals
+```
+
+### Output
+
+```json
+{
+  "userId": "12345",
+  "meals": [
+    {
+      "mealId": "m1",
+      "name": "Grilled Chicken Salad",
+      "category": "Lunch",
+      "calories": 450,
+      "protein": 35,
+      "carbs": 20,
+      "fat": 15,
+      "time": "2026-04-20T12:30:00Z"
+    },
+    {
+      "mealId": "m2",
+      "name": "Oatmeal with Berries",
+      "category": "Breakfast",
+      "calories": 300,
+      "protein": 10,
+      "carbs": 50,
+      "fat": 5,
+      "time": "2026-04-20T08:00:00Z"
+    }
+  ]
+}
+```
+
+## 4.2 Get Categories (GET)
+
+**Endpoint:** `/users/{userId}/categories`
+
+After viewing their meals, the user can retrieve the meal categories associated with those logged meals.
+
+### Input
+
+```
+GET /users/12345/categories
+```
+
+### Output
+
+```json
+{
+  "userId": "12345",
+  "categories": [
+    {
+      "name": "Breakfast",
+      "mealCount": 10
+    },
+    {
+      "name": "Lunch",
+      "mealCount": 8
+    },
+    {
+      "name": "Dinner",
+      "mealCount": 7
+    },
+    {
+      "name": "Snack",
+      "mealCount": 5
+    }
+  ]
+}
+```
+
+## 4.3 Get Meal Stats (GET)
+
+**Endpoint:** `/users/{userId}/meal-stats`
+
+Finally, the user retrieves summary statistics about their meals, such as total meals logged, calories consumed, and their most frequent meal category.
+
+### Input
+
+```
+GET /users/12345/meal-stats
+```
+
+### Output
+
+```json
+{
+  "userId": "12345",
+  "stats": {
+    "totalMeals": 30,
+    "averageCaloriesPerMeal": 420,
+    "totalCalories": 12600,
+    "macros": {
+      "protein": 900,
+      "carbs": 1500,
+      "fat": 400
+    },
+    "mostFrequentCategory": "Lunch"
+  }
+}
+```
