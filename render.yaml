@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: central-coast-cauldrons
+    name: DataFit Meal Tracker
     runtime: python
     plan: free
     autoDeploy: true
