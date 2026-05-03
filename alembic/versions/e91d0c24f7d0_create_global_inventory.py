@@ -29,6 +29,5 @@ def upgrade() -> None:
 
     op.execute(sa.text("INSERT INTO global_inventory (gold) VALUES (100)"))
 
-
 def downgrade():
     op.drop_table("global_inventory")

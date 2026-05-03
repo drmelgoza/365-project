@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from src.api import carts, catalog, bottler, barrels, admin, info, inventory
+from src.api import carts, catalog, bottler, barrels, admin, info, inventory, users
 from starlette.middleware.cors import CORSMiddleware
 
 description = """
@@ -51,7 +51,9 @@ app.include_router(barrels.router)
 app.include_router(admin.router)
 app.include_router(info.router)
 
+app.include_router(users.router)
+
 
 @app.get("/")
 async def root():
-    return {"message": "Shop is open for business!"}
+    return {"message": "Tracker is Ready to go!"}
