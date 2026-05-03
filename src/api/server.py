@@ -3,7 +3,7 @@ from src.api import carts, catalog, bottler, barrels, admin, info, inventory, us
 from starlette.middleware.cors import CORSMiddleware
 
 description = """
-Central Coast Cauldrons is the premier ecommerce site for all your alchemical desires.
+Data Fit Meal Tracker is your perfect place for storing meal plans and logging your meals.
 """
 tags_metadata = [
     {"name": "cart", "description": "Place potion orders."},
@@ -27,8 +27,8 @@ app = FastAPI(
     version="0.0.1",
     terms_of_service="http://example.com/terms/",
     contact={
-        "name": "Lucas Pierce",
-        "email": "lupierce@calpoly.edu",
+        "name": "the Data Fit Team",
+        "email": "drmelgoz@calpoly.edu",
     },
     openapi_tags=tags_metadata,
 )
@@ -43,17 +43,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(admin.router)
+app.include_router(users.router)
 app.include_router(inventory.router)
 app.include_router(carts.router)
 app.include_router(catalog.router)
 app.include_router(bottler.router)
 app.include_router(barrels.router)
-app.include_router(admin.router)
 app.include_router(info.router)
 
-app.include_router(users.router)
 
 
 @app.get("/")
 async def root():
-    return {"message": "Tracker is Ready to go!"}
+    return {"message": "Tracker is ready to go!"}

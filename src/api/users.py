@@ -31,21 +31,38 @@ def create_user(new_user: User):
     Creates a new user profile for a specific customer.
     """
     with db.engine.begin() as connection:
-        new = connection.execute(
+        result = connection.execute(
             sqlalchemy.text(
                 """
-                INSERT INTO users (username, name, email, height, weight, age)
-                VALUES (:username, :name, :email, :height, :weight, :age)
-                RETURNING id
+                SELECT id
+                FROM users
+                where email = :email
                 """
             ),
             [{
-            "username": new_user.username,
-            "name": new_user.name,
-            "email": new_user.email,
-            "height": new_user.height,
-            "weight": new_user.weight,
-            "age": new_user.age,
+            "email": new_user.email
             }]
-        ).one()
-    return UserCreateResponse(user_id=new.id)
+        ).one_or_none()
+
+    if result:
+        raise HTTPException(status_code=500, detail="User with this email already exists.")
+    else:
+        with db.engine.begin() as connection:
+            new = connection.execute(
+                sqlalchemy.text(
+                    """
+                    INSERT INTO users (username, name, email, height, weight, age)
+                    VALUES (:username, :name, :email, :height, :weight, :age)
+                    RETURNING id
+                    """
+                ),
+                [{
+                "username": new_user.username,
+                "name": new_user.name,
+                "email": new_user.email,
+                "height": new_user.height,
+                "weight": new_user.weight,
+                "age": new_user.age,
+                }]
+            ).one()
+        return UserCreateResponse(user_id=new.id)
