@@ -1,24 +1,13 @@
 from fastapi import FastAPI
-from src.api import carts, catalog, bottler, barrels, admin, info, inventory, users
+from src.api import admin, users
 from starlette.middleware.cors import CORSMiddleware
 
 description = """
 Data Fit Meal Tracker is your perfect place for storing meal plans and logging your meals.
 """
 tags_metadata = [
-    {"name": "cart", "description": "Place potion orders."},
-    {"name": "catalog", "description": "View the available potions."},
-    {"name": "bottler", "description": "Bottle potions from the raw magical elixir."},
-    {
-        "name": "barrels",
-        "description": "Buy barrels of raw magical elixir for making potions.",
-    },
-    {"name": "admin", "description": "Where you reset the game state."},
-    {"name": "info", "description": "Get updates on time"},
-    {
-        "name": "inventory",
-        "description": "Get the current inventory of shop and buying capacity.",
-    },
+    {"name": "admin", "description": "Reset the tracker state."},
+    {"name": "user", "description": "Manage User Profiles and Items"}
 ]
 
 app = FastAPI(
@@ -45,12 +34,6 @@ app.add_middleware(
 
 app.include_router(admin.router)
 app.include_router(users.router)
-app.include_router(inventory.router)
-app.include_router(carts.router)
-app.include_router(catalog.router)
-app.include_router(bottler.router)
-app.include_router(barrels.router)
-app.include_router(info.router)
 
 
 

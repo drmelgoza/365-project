@@ -66,3 +66,63 @@ def create_user(new_user: User):
                 }]
             ).one()
         return UserCreateResponse(user_id=new.id)
+
+
+class FoodItem(BaseModel):
+    user_id: int
+    name: str
+    calories: float
+    protein: float
+    carbs: float
+    fat: float
+
+class ItemCreateResponse(BaseModel):
+    item_id: int
+    user_id: int
+    status: str
+
+
+
+@router.post("/{user_id}/items", response_model=UserCreateResponse)
+def add_food_item(user_id: int, new_item: FoodItem):
+    with db.engine.begin() as connection:
+        user_result = connection.execute(
+            sqlalchemy.text(
+                """
+                SELECT 1 
+                FROM users
+                WHERE id = :user_id
+                """
+            ),
+            [{
+            "user_id": user_id,
+            }]
+        ).one_or_none()
+
+    if not user_result:
+        raise HTTPException(status_code=404, detail="User does not exist.")
+    else:
+        with db.engine.begin() as connection:
+            item_result = connection.execute(
+                sqlalchemy.text(
+                    """
+                    INSERT INTO food_items (user_id, name, calories, protein, carbs, fat)
+                    VALUES (name, calories, protein, carbs, fat)
+                    RETURNING id
+                    """
+                ),
+                [{
+                "name": new_item.name,
+                "calories": new_item.calories,
+                "protein": new_item.protein,
+                "carbs": new_item.carbs,
+                "fat": new_item.fat
+                }]
+            ).one()
+
+        return ItemCreateResponse(user_id=user_id, item_id=item_result.id, status="created")
+
+
+
+
+
