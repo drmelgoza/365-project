@@ -22,7 +22,7 @@ tags_metadata = [
 ]
 
 app = FastAPI(
-    title="Central Coast Cauldrons",
+    title="Data Fit Meal Tracker",
     description=description,
     version="0.0.1",
     terms_of_service="http://example.com/terms/",
