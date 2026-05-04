@@ -69,7 +69,6 @@ def create_user(new_user: User):
 
 
 class FoodItem(BaseModel):
-    user_id: int
     name: str
     calories: float
     protein: float
@@ -82,8 +81,7 @@ class ItemCreateResponse(BaseModel):
     status: str
 
 
-
-@router.post("/{user_id}/items", response_model=UserCreateResponse)
+@router.post("/{user_id}/items", response_model=ItemCreateResponse)
 def add_food_item(user_id: int, new_item: FoodItem):
     with db.engine.begin() as connection:
         user_result = connection.execute(
@@ -106,12 +104,13 @@ def add_food_item(user_id: int, new_item: FoodItem):
             item_result = connection.execute(
                 sqlalchemy.text(
                     """
-                    INSERT INTO food_items (user_id, name, calories, protein, carbs, fat)
-                    VALUES (name, calories, protein, carbs, fat)
+                    INSERT INTO food_item (user_id, name, calories, protein, carbs, fat)
+                    VALUES (:user_id, :name, :calories, :protein, :carbs, :fat)
                     RETURNING id
                     """
                 ),
                 [{
+                "user_id": user_id,
                 "name": new_item.name,
                 "calories": new_item.calories,
                 "protein": new_item.protein,
@@ -120,7 +119,7 @@ def add_food_item(user_id: int, new_item: FoodItem):
                 }]
             ).one()
 
-        return ItemCreateResponse(user_id=user_id, item_id=item_result.id, status="created")
+    return ItemCreateResponse(user_id=user_id, item_id=item_result.id, status="created")
 
 
 
