@@ -1,7 +1,7 @@
 """build profiles for v1
 
 Revision ID: eefb11c3bc44
-Revises: e91d0c24f7d0
+Revises: 
 Create Date: 2026-05-03 13:27:33.161709
 
 """
@@ -13,13 +13,12 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = 'eefb11c3bc44'
-down_revision: Union[str, None] = 'e91d0c24f7d0'
+down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.drop_table("global_inventory")
 
     op.create_table("user",
                     sa.Column("id", sa.Integer(), primary_key=True),
