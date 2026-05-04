@@ -81,6 +81,39 @@ class UpdateUserResponse(BaseModel):
     status: str
 
 
+@router.get("/{user_id}", response_model=User)
+def get_user_stats(user_id: int):
+    with db.engine.begin() as connection:
+        result = connection.execute(
+            sqlalchemy.text(
+                """
+                SELECT *
+                FROM users
+                WHERE id = :user_id
+                """
+            ),
+            [{
+                "user_id": user_id
+            }]
+        ).one_or_none()
+
+        # Our current inference as to how non-existent users should be handled.
+        if not result:
+            raise HTTPException(status_code=404, detail="User does not exist.")
+
+        else:
+            user = User(
+                username=result.username,
+                name=result.name,
+                email=result.email,
+                height=result.height,
+                weight=result.weight,
+                age=result.age
+            )
+
+            return user
+
+
 # PATCH is used here to preserve the url and
 # avoid an extra url tag.
 # Based off of the PATCH principles at
@@ -182,6 +215,13 @@ class ItemCreateResponse(BaseModel):
 #This will involve renaming the "food_item" table and creating a new
 #"user_items" table that will serve as the many_to_many table
 #between the two object types.
+
+#TODO: Implement Meal Logging:
+#This will involve creating two new tables: "user_logs" and "log_items"
+#"user_logs" will relate Users to their Logs, while "log_items"
+#will relate logs (by their id value) to individual items.
+
+
 @router.post("/{user_id}/items", response_model=ItemCreateResponse)
 def add_food_item(user_id: int, new_item: FoodItem):
     with db.engine.begin() as connection:
@@ -222,11 +262,3 @@ def add_food_item(user_id: int, new_item: FoodItem):
             ).one()
 
     return ItemCreateResponse(user_id=user_id, item_id=item_result.id, status="created")
-
-#TODO: Implement Meal Logging:
-#This will involve creating two new tables: "user_logs" and "log_items"
-#"user_logs" will relate Users to their Logs, while "log_items"
-#will relate logs (by their id value) to individual items.
-
-
-
