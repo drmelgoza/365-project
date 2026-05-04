@@ -1,15 +1,55 @@
 # 3 Example User Flows
 
-## Flow 1: Profile Creation
+## Flow 1: Profile Creation and Editing
 
 ### Scenario:
-Jonathan is a new user to DataFit, and wants to begin using the app
-to prepare for his martial arts tournament. To begin tracking his goals,
+Daniel is a new user to DataFit, and wants to begin using the app
+to prepare for his karate tournament. To begin tracking his goals,
 he will first start by creating a profile.
 
 ### Steps:
-- go to `/profiles` to begin a new profile and retrieve the new profileid `1234`
-- then, go to `/profiles/1234` to view his profile and ensure its created
+- Danial calls `POST /users` to begin a new profile.
+- With that call, he inputs the following information:
+    
+```
+{
+    "username": karate_kid_84
+    "name": Daniel
+    "email": daniel@somemail.com
+    "height": 68
+    weight: 125
+    age: 19
+}
+```
+- After the call is successfully executed, he is returned a user id; `"user_id": 20`
+- Daniel now realizes after creating his profile that he's actually 5'10", so he will now call `PATCH users/20` to fix his mistake.
+- With that call, he inputs the following:
+
+```
+{
+    "height": 70
+}
+```
+- Daniel is then returned the following:
+
+```
+{
+    "user_id": 20,
+    "status": updated
+}
+```
+- Now, Daniel can call `GET users/20` to ensure the update went through:
+
+```
+{
+    "username": karate_kid_84
+    "name": Daniel
+    "email": daniel@somemail.com
+    "height": 70
+    weight: 125
+    age: 19
+}
+```
 
 ## Flow 2: Meal Logging
 
