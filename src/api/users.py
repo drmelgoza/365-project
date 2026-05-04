@@ -81,6 +81,10 @@ class ItemCreateResponse(BaseModel):
     status: str
 
 
+#TODO: Update Schema to include a "user_items" and "food_items" table.
+#This will involve renaming the "food_item" table and creating a new
+#"user_items" table that will serve as the many_to_many table
+#between the two object types.
 @router.post("/{user_id}/items", response_model=ItemCreateResponse)
 def add_food_item(user_id: int, new_item: FoodItem):
     with db.engine.begin() as connection:
@@ -121,7 +125,10 @@ def add_food_item(user_id: int, new_item: FoodItem):
 
     return ItemCreateResponse(user_id=user_id, item_id=item_result.id, status="created")
 
-
+#TODO: Implement Meal Logging:
+#This will involve creating two new tables: "user_logs" and "log_items"
+#"user_logs" will relate Users to their Logs, while "log_items"
+#will relate logs (by their id value) to individual items.
 
 
 
