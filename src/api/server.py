@@ -7,7 +7,7 @@ Data Fit Meal Tracker is your perfect place for storing meal plans and logging y
 """
 tags_metadata = [
     {"name": "admin", "description": "Reset the tracker state."},
-    {"name": "user", "description": "Manage User Profiles and Items"}
+    {"name": "users", "description": "Manage User Profiles and Items"}
 ]
 
 app = FastAPI(
