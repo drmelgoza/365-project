@@ -57,38 +57,39 @@ he will first start by creating a profile.
    
    ``` 
     curl -X 'POST' \
-    'http://127.0.0.1:3000/users/' \
-    -H 'accept: application/json' \
-    -H 'access_token: tusk' \
-    -H 'Content-Type: application/json' \
-    -d '{
-    "username": "karate_kid_84",
-    "name": "Daniel",
-    "email": "daniel@somemail.com",
-    "height": 68,
-    "weight": 125,
-    "age": 19
+      'https://datafit-meal-tracker.onrender.com/users/' \
+      -H 'accept: application/json' \
+      -H 'access_token: *** \
+      -H 'Content-Type: application/json' \
+      -d '{
+      "username": "karate_kid_84",
+      "name": "Daniel",
+      "email": "daniel@somemail.com",
+      "height": 68,
+      "weight": 125,
+      "age": 19
     }'
     ```
+   
    2. Result:
     ```
    {
-        "user_id": 11
+        "user_id": 1
     }
    ```
    
-2. `PATCH users/11`:
+2. `PATCH users/{user_id}`:
 
    1. Curl Command: 
    
     ```
-   curl -X 'PATCH' \
-   'http://127.0.0.1:3000/users/11' \
-   -H 'accept: application/json' \
-   -H 'access_token: tusk' \
-   -H 'Content-Type: application/json' \
-   -d '{
-   "height": 70
+    curl -X 'PATCH' \
+      'https://datafit-meal-tracker.onrender.com/users/1' \
+      -H 'accept: application/json' \
+      -H 'access_token: *** ' \
+      -H 'Content-Type: application/json' \
+      -d '{
+      "height": 70
     }'
     ```
 
@@ -96,19 +97,19 @@ he will first start by creating a profile.
 
      ```
     {
-    "user_id": 11,
+    "user_id": 1,
     "status": "updated"
     }
     ```
 
-3. `GET users/11`
+3. `GET users/{user_id}`
 
     1. Curl Command:
     ```
     curl -X 'GET' \
-    'http://127.0.0.1:3000/users/11' \
-    -H 'accept: application/json' \
-    -H 'access_token: tusk'
+      'https://datafit-meal-tracker.onrender.com/users/1' \
+      -H 'accept: application/json' \
+      -H 'access_token: *** '
     ```
    
    2. Result:
