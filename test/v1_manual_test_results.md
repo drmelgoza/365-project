@@ -16,8 +16,8 @@ he will first start by creating a profile.
     "name": Daniel
     "email": daniel@somemail.com
     "height": 68
-    weight: 125
-    age: 19
+    "weight": 125
+    "age": 19
 }
 ```
 - After the call is successfully executed, he is returned a user id; `"user_id": 20`
@@ -44,8 +44,8 @@ he will first start by creating a profile.
     "name": Daniel
     "email": daniel@somemail.com
     "height": 70
-    weight: 125
-    age: 19
+    "weight": 125
+    "age": 19
 }
 ```
 
