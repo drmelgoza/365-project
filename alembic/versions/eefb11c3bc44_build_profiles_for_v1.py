@@ -58,6 +58,7 @@ def upgrade() -> None:
                     sa.Column("time", sa.TIMESTAMP, nullable=False))
 
 
+
 def downgrade() -> None:
     op.drop_table("user")
     op.drop_table("food_item")

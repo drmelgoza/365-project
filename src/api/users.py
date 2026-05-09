@@ -218,6 +218,168 @@ class ItemCreateResponse(BaseModel):
 #This will involve creating two new tables: "user_logs" and "log_items"
 #"user_logs" will relate Users to their Logs, while "log_items"
 #will relate logs (by their id value) to individual items.
+    
+##DAVID"S WORK ______________________________________________________##
+        
+##I perosnally do not see a reason to add user_logs, meal_logs can just cotain all of the users logs and if we want a specific one,
+## we just screach by User_id which is uqiue so we should only get the rows that contain that user. Logs have a lot of users, but the user has
+## only one log, so its a one to many, no need for extra table
+    
+## Here, you might want to do a join to combine user_items and meal_log that way you can get both. Once again, I not sure what the attributes will
+## end up being so whoever does it can figure out the join stuff    
+    
+#Get call to get the items
+@router.get("/{user_id}/log")
+def get_all_logs(user_id):
+    with db.engine.begin() as connection:
+        user_result = connection.execute(
+            sqlalchemy.text(
+                """
+                SELECT 1 
+                FROM users
+                WHERE id = :user_id
+                """
+            ),
+            [{
+            "user_id": user_id,
+            }]
+        ).one_or_none()
+
+        if not user_result:
+            raise HTTPException(status_code=404, detail="User does not exist.")
+
+        users_logs = connection.execute(
+            sqlalchemy.text(
+                """
+                Select category, time
+                Where user_id = :user_id
+                """
+            ),
+            {
+                "user_id": user_id,
+            }
+        ).all()
+    
+    All_logs = []
+    for logs in users_logs:
+        All_logs.append([logs[0], logs[1]])
+    
+    return (f"ITEMS THAT HAVE BEEN LOGGED BY USER {user_id}: {All_logs}")
+
+
+#POST call to added items, 
+
+@router.post("/{user_id}/log")
+def add_to_meal_log(user_id : int, category: str, time):
+    with db.engine.begin() as connection:
+        user_result = connection.execute(
+            sqlalchemy.text(
+                """
+                SELECT 1 
+                FROM users
+                WHERE id = :user_id
+                """
+            ),
+            [{
+            "user_id": user_id,
+            }]
+        ).one_or_none()
+
+        if not user_result:
+         raise HTTPException(status_code=404, detail="User does not exist.")
+  
+        connection.execute(
+            sqlalchemy.text(
+                """
+                INSERT INTO meal_log (user_id, category, time)
+                VALUES (:user_id, :category, :time)
+                """
+            ),
+            {
+                "user_id": user_id,
+                "category": category,
+                "time": time
+                }
+        )
+
+        ## User_items and Log_items implemitation to added. Attributes I would add:
+        ## User_items: id, User_id (From user), food_id (From food_items)
+        ## Log_items: id, Log_id (From meal_log), food_id (From food_items)
+        connection.execute(
+            sqlalchemy.text(
+                """
+                INSERT INTO user_items (food)
+                """
+            )
+        )
+
+        connection.execute(
+            sqlalchemy.text(
+                """
+                INSERT INTO log_items (food)
+                """
+            )
+        )
+    return {"message": "Meal log item added"}
+
+#delete to delete items 
+
+@router.delete("/{user_id}/log")
+def remove_from_meal_log(user_id : int, category: str, time, Food: FoodItem):
+    with db.engine.begin() as connection:
+        user_result = connection.execute(
+            sqlalchemy.text(
+                """
+                SELECT 1 
+                FROM users
+                WHERE id = :user_id
+                """
+            ),
+            [{
+            "user_id": user_id,
+            }]
+        ).one_or_none()
+
+
+        if not user_result:
+            raise HTTPException(status_code=404, detail="User does not exist.")
+
+        connection.execute(
+            sqlalchemy.text(
+                """
+                DELETE FROM meal_log
+                WHERE user_id = :user_id AND category = :category, AND time = :time
+
+                """
+            ),
+            {
+                "user_id": user_id,
+                "category": category,
+                "time": time
+                }
+        )
+    
+## When user_items is deleted, related to the meal_log so that the correct row is removed from user_items that related to meal_log
+## Maybe user TIME combined category, or maybe added a date column,       
+        connection.execute(
+            sqlalchemy.text(
+                """
+                DELETE FROM user_items
+                """
+            ),
+        )
+        connection.execute(
+            sqlalchemy.text(
+                """
+                DELETE FROM log_items          
+                """
+            ),
+        )
+
+    return {"message": "Meal log item removed"}
+
+
+## END OF DAVID"S WORK__________________________________________________##
 
 
 @router.post("/{user_id}/items", response_model=ItemCreateResponse)
