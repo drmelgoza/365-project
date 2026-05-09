@@ -58,7 +58,7 @@ Joseph is has just begun using DataFit, and has just finished his breakfast for 
 To keep up with his protein goal, he must now add the meal into the DataFit meal log.
 
 ### Steps:
-- using his userid, Joseph calls POST `users/4032/meal-logs` with the following info:
+- Joseph wants to add his favorite breakfast omelette to track with Datafit. Joseph calls POST `users/4567/items` to add the omelette.
 ```
 {
   "name": "Johnny's Family Omelette",
@@ -68,28 +68,88 @@ To keep up with his protein goal, he must now add the meal into the DataFit meal
   "fat": 15
 }
 ```
-- Joseph then recieves the following output:
+
+- After being created the omelettes's new item id is returned:
 ```
 {
-  "mealId": "m101",
-  "userId": "4032",
-  "status": "created"
+  item_id: 1231
 }
 ```
-- Joseph wants to ensure the meal is considered a breakfast meal, so he calls `/users/4032/meals/m101/category` with the following info:
+
+users/{users_id}/meal_logs/{2347}
+- using his userid and the needed item id, Joseph calls POST `meal_logs/4567` to log the omelette for breakfast:
 ```
 {
-  "category":"Lunch"
+  "items": [1231]
+  "date": 1/1/21
+  "time": 8:30
 }
 ```
+
 - Finally, Joseph recieves the following output:
 ```
 {
-  "mealId": "m101",
-  "category": "Lunch",
+  "status": "logged"
+}
+```
+
+- Joseph forgot to log the breakfast sausage that he had as a side with the omelette. He'll create the sausage item first with POST `4567/items`:
+```
+{
+  "name": "Super Healthy Sausage",
+  "calories": 450,
+  "protein": 30,
+  "carbs": 20,
+  "fat": 20
+}
+```
+
+- He'll retreive the new item id:
+```
+{
+  item_id: 3213
+}
+```
+
+- And use it to append the log with PATCH `meal_logs/4567`
+```
+{
+  "items": [3213]
+  "date": 1/1/21
+  "time": 8:30
+}
+```
+
+- The status is then returned:
+```
+{
   "status": "updated"
 }
 ```
+  
+- Joseph can now confirm the final log has both items using GET `meal_logs/4567/`:
+```
+{
+  "date": 1/1/21
+  "time": 8:30
+  "items": [
+    {
+      "name": "Johnny's Family Omelette",
+      "calories": 450,
+      "protein": 35,
+      "carbs": 20,
+      "fat": 15
+    },
+    {
+      "name": "Super Healthy Sausage",
+      "calories": 450,
+      "protein": 30,
+      "carbs": 20,
+      "fat": 20
+    }]
+}
+```
+  
 
 
 ## Flow 3: Meal Tracking
