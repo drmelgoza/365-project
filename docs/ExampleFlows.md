@@ -149,40 +149,85 @@ users/{users_id}/meal_logs/{2347}
     }]
 }
 ```
-  
 
-
-## Flow 3: Meal Tracking
+## Flow 3: Meal Plan
 
 ### Scenario:
 Jolyne has been using DataFit for the first time today, and wants to see what her day's meals look like overall.
-
-### Steps:
-- Jolyne calls the following endpoint using her userId, `/users/12345/meals` resulting in:
-```
-{
-  "userId": "12345",
-  "meals": [
+##add input. outputs, api endpoints
+### Logging meal (input):
+```{
+"items": [
     {
-      "mealId": "m2",
-      "name": "Grilled Chicken Salad",
-      "category": "Lunch",
+      "name": "Johnny's Family Omelette",
       "calories": 450,
       "protein": 35,
       "carbs": 20,
-      "fat": 15,
-      "time": "2026-04-20T12:30:00Z"
+      "fat": 15
     },
-    {
-      "mealId": "m1",
-      "name": "Oatmeal with Berries",
-      "category": "Breakfast",
-      "calories": 300,
-      "protein": 10,
-      "carbs": 50,
-      "fat": 5,
-      "time": "2026-04-20T08:00:00Z"
-    }
-  ]
+]
+```
+### Logging category of meal (input):
+```{
+    "item_id": 3213,
+    "day": {"Monday"},
+    "category": "Breakfast",
+    "time": 9:30
 }
 ```
+### Returning food log info (output):
+```{
+    "day": {"Monday"},
+    "time" 9:30,
+    "category": "Breakfast,
+    items": [
+    {
+      "name": "Johnny's Family Omelette",
+      "calories": 450,
+      "protein": 35,
+      "carbs": 20,
+      "fat": 15
+    }]
+}
+```
+### Categorizing based on category (output):
+```{
+    "category": Breakfast,
+    items": [
+    {
+      "name": "Johnny's Family Omelette",
+      "calories": 450,
+      "protein": 35,
+      "carbs": 20,
+      "fat": 15
+    }]
+}
+```
+### Categorizing based on day (output):
+```{
+    "day": {"Monday"},
+    items": [
+    {
+      "name": "Johnny's Family Omelette",
+      "calories": 450,
+      "protein": 35,
+      "carbs": 20,
+      "fat": 15
+    }]
+}
+```
+#not imp but maybe by monday
+### Removing user inputted meal:
+Input:
+```{
+    "Please input meal name, id to remove: "
+}
+```
+Output:
+```{
+    "item_id", "is removed from your plan!"
+}
+```
+
+    
+    
