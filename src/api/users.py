@@ -315,12 +315,19 @@ def get_log(user_id:int, log_id:int):
         items_list = [LoggedItem(name=itm.name, calories=itm.calories, protein=itm.protein, carbs=itm.carbs, fat=itm.fat) for itm in items_result]
         if not info_result:
             raise HTTPException(status_code=404, detail="Log not found.")
+
         return MealLogResponse(category=info_result.category,
                                month=info_result.month,
                                day=info_result.day,
                                year=info_result.year,
                                time=str(info_result.time),
                                items=items_list)
+
+class PlanCreationResponse(BaseModel):
+
+
+@router.post("/{user_id}/plans", response_model=PlanCreationResponse)
+def create_meal_plan(user_id:int):
 
 
 class AddItemsToLog(BaseModel):
