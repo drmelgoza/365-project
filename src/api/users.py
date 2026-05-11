@@ -247,6 +247,11 @@ class MealLogResponse(BaseModel):
     time: str
     items: list[LoggedMealItem]
 
+class MealLogUpdate(BaseModel):
+    items: list[int]
+    date: str
+    time: str
+
 @router.get("/{user_id}/log", response_model=MealLogResponse)
 def get_all_logs(user_id):
     with db.engine.begin() as connection:
@@ -403,6 +408,29 @@ def remove_from_meal_log(user_id : int, category: str, time, Food: FoodItem):
         )
 
     return MealLogStatusResponse(status="removed")
+
+@router.patch("/{user_id}/log", response_model=MealLogStatusResponse)
+def update_meal_log(user_id: int, log: MealLogUpdate):
+    with db.engine.begin() as connection:
+        user_result = connection.execute(
+            sqlalchemy.text(
+                """
+                SELECT 1
+                FROM users
+                WHERE id = :user_id
+                """
+            ),
+            [{
+            "user_id": user_id,
+            }]
+        ).one_or_none()
+
+        if not user_result:
+            raise HTTPException(status_code=404, detail="User does not exist.")
+
+        #TODO: Implement actual update logic here
+
+    return MealLogStatusResponse(status="updated")
 
 
 ## END OF DAVID"S WORK__________________________________________________##
