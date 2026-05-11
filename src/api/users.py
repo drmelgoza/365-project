@@ -208,6 +208,47 @@ class ItemCreateResponse(BaseModel):
     user_id: int
     status: str
 
+@router.post("/{user_id}/items", response_model=ItemCreateResponse)
+def add_food_item(user_id: int, new_item: FoodItem):
+    with db.engine.begin() as connection:
+        user_result = connection.execute(
+            sqlalchemy.text(
+                """
+                SELECT 1
+                FROM users
+                WHERE id = :user_id
+                """
+            ),
+            [{
+                "user_id": user_id,
+            }]
+        ).one_or_none()
+
+    # Our current inference as to how non-existent users should be handled.
+    if not user_result:
+        raise HTTPException(status_code=404, detail="User does not exist.")
+    else:
+        with db.engine.begin() as connection:
+            item_result = connection.execute(
+                sqlalchemy.text(
+                    """
+                    INSERT INTO food_items (user_id, name, calories, protein, carbs, fat)
+                    VALUES (:user_id, :name, :calories, :protein, :carbs, :fat) 
+                    RETURNING id
+                    """
+                ),
+                [{
+                    "user_id": user_id,
+                    "name": new_item.name,
+                    "calories": new_item.calories,
+                    "protein": new_item.protein,
+                    "carbs": new_item.carbs,
+                    "fat": new_item.fat
+                }]
+            ).one()
+
+    return ItemCreateResponse(user_id=user_id, item_id=item_result.id, status="created")
+
 
 #TODO: Update Schema to include a "user_items" and "food_items" table for Version 2.
 #This will involve renaming the "food_item" table and creating a new
@@ -222,7 +263,7 @@ class ItemCreateResponse(BaseModel):
 ##DAVID"S WORK ______________________________________________________##
 
 ##I perosnally do not see a reason to add user_logs, meal_logs can just cotain all of the users logs and if we want a specific one,
-## we just screach by User_id which is uqiue so we should only get the rows that contain that user. Logs have a lot of users, but the user has
+## we just search by User_id which is unique so we should only get the rows that contain that user. Logs have a lot of users, but the user has
 ## only one log, so its a one to many, no need for extra table
 
 ## Here, you might want to do a join to combine user_items and meal_log that way you can get both. Once again, I not sure what the attributes will
@@ -230,8 +271,15 @@ class ItemCreateResponse(BaseModel):
 
 #Get call to get the items
 
-class MealLogStatusResponse(BaseModel):
-    status: str
+class LogInfo(BaseModel):
+    month: str
+    day: str
+    year: str
+    time: str
+    category: str
+
+class LogCreationResponse(BaseModel):
+    log_id: int
 
 
 class LoggedMealItem(BaseModel):
@@ -252,7 +300,30 @@ class MealLogUpdate(BaseModel):
     date: str
     time: str
 
-@router.get("/{user_id}/log", response_model=MealLogResponse)
+@router.post("/{user_id}/logs", response_model=LogCreationResponse)
+def create_meal_log(user_id: int, info: LogInfo):
+    with db.engine.begin() as connection:
+        result = connection.execute(
+            sqlalchemy.text(
+                """
+                INSERT INTO user_logs (user_id, month, day, year, time, category)
+                VALUES (:user_id, :month, :day, :year, :time, :category)
+                returning id
+                """
+            ),
+            [{
+                "user_id": user_id,
+                "month": info.month,
+                "day": info.day,
+                "year": info.year,
+                "time": info.time,
+                "category": info.category
+            }]
+        ).one()
+
+    return LogCreationResponse(log_id=result.id)
+
+@router.get("/{user_id}/logs", response_model=MealLogResponse)
 def get_all_logs(user_id):
     with db.engine.begin() as connection:
         user_result = connection.execute(
@@ -434,45 +505,3 @@ def update_meal_log(user_id: int, log: MealLogUpdate):
 
 
 ## END OF DAVID"S WORK__________________________________________________##
-
-
-@router.post("/{user_id}/items", response_model=ItemCreateResponse)
-def add_food_item(user_id: int, new_item: FoodItem):
-    with db.engine.begin() as connection:
-        user_result = connection.execute(
-            sqlalchemy.text(
-                """
-                SELECT 1 
-                FROM users
-                WHERE id = :user_id
-                """
-            ),
-            [{
-            "user_id": user_id,
-            }]
-        ).one_or_none()
-
-    #Our current inference as to how non-existent users should be handled.
-    if not user_result:
-        raise HTTPException(status_code=404, detail="User does not exist.")
-    else:
-        with db.engine.begin() as connection:
-            item_result = connection.execute(
-                sqlalchemy.text(
-                    """
-                    INSERT INTO food_item (user_id, name, calories, protein, carbs, fat)
-                    VALUES (:user_id, :name, :calories, :protein, :carbs, :fat)
-                    RETURNING id
-                    """
-                ),
-                [{
-                "user_id": user_id,
-                "name": new_item.name,
-                "calories": new_item.calories,
-                "protein": new_item.protein,
-                "carbs": new_item.carbs,
-                "fat": new_item.fat
-                }]
-            ).one()
-
-    return ItemCreateResponse(user_id=user_id, item_id=item_result.id, status="created")
