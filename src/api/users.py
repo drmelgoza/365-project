@@ -195,27 +195,6 @@ def update_user_stats(user_id: int, new_user_stats: NewUserStats):
         return UpdateUserResponse(user_id=user_id, status="updated")
 
 
-#TODO: Update Schema to include a "user_items" and "food_items" table for Version 2.
-#This will involve renaming the "food_item" table and creating a new
-#"user_items" table that will serve as the many_to_many table
-#between the two object types.
-
-#TODO: Implement Meal Logging:
-#This will involve creating two new tables: "user_logs" and "log_items"
-#"user_logs" will relate Users to their Logs, while "log_items"
-#will relate logs (by their id value) to individual items.
-
-##DAVID"S WORK ______________________________________________________##
-
-##I perosnally do not see a reason to add user_logs, meal_logs can just cotain all of the users logs and if we want a specific one,
-## we just search by User_id which is unique so we should only get the rows that contain that user. Logs have a lot of users, but the user has
-## only one log, so its a one to many, no need for extra table
-
-## Here, you might want to do a join to combine user_items and meal_log that way you can get both. Once again, I not sure what the attributes will
-## end up being so whoever does it can figure out the join stuff
-
-#Get call to get the items
-
 class LogInfo(BaseModel):
     month: int
     day: int
@@ -244,6 +223,22 @@ class MealLogResponse(BaseModel):
 @router.post("/{user_id}/logs", response_model=LogCreationResponse)
 def create_meal_log(user_id: int, info: LogInfo):
     with db.engine.begin() as connection:
+        user_result = connection.execute(
+            sqlalchemy.text(
+                """
+                SELECT 1
+                FROM users
+                WHERE id = :user_id
+                """
+            ),
+            [{
+                "user_id": user_id,
+            }]
+        ).one_or_none()
+
+        if not user_result:
+            raise HTTPException(status_code=404, detail="User does not exist.")
+
         result = connection.execute(
             sqlalchemy.text(
                 """
@@ -323,40 +318,11 @@ def get_log(user_id:int, log_id:int):
                                time=str(info_result.time),
                                items=items_list)
 
-class PlanCreationResponse(BaseModel):
-
-
-@router.post("/{user_id}/plans", response_model=PlanCreationResponse)
-def create_meal_plan(user_id:int):
-
-
-class AddItemsToLog(BaseModel):
+class NewLogItems(BaseModel):
     item_ids: list[int]
 
-@router.post("/{user_id}/logs/{log_id}/items")
-def add_items_to_log(user_id: int, log_id: int, body: AddItemsToLog):
-    """Add one or more food items to an existing meal log."""
-    with db.engine.begin() as connection:
-        log_exists = connection.execute(
-            sqlalchemy.text("SELECT 1 FROM user_logs WHERE id = :log_id AND user_id = :user_id"),
-            {"log_id": log_id, "user_id": user_id}
-        ).one_or_none()
-        if not log_exists:
-            raise HTTPException(status_code=404, detail="Log not found.")
-
-        for item_id in body.item_ids:
-            item_exists = connection.execute(
-                sqlalchemy.text("SELECT 1 FROM user_items WHERE id = :item_id AND user_id = :user_id"),
-                {"item_id": item_id, "user_id": user_id}
-            ).one_or_none()
-            if not item_exists:
-                raise HTTPException(status_code=404, detail=f"Item {item_id} not found.")
-            connection.execute(
-                sqlalchemy.text("INSERT INTO log_items (log_id, item_id) VALUES (:log_id, :item_id)"),
-                {"log_id": log_id, "item_id": item_id}
-            )
-    return {"status": "items added"}
-
+class LogItemsResponse(BaseModel):
+    status: str
 
 class FoodItem(BaseModel):
     name: str

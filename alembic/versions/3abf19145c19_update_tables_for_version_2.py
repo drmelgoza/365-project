@@ -29,7 +29,7 @@ def upgrade() -> None:
     op.add_column('user_logs', sa.Column('time', sa.TIME(), nullable=True))
 
     op.create_table("log_items",
-                    sa.Column("id", sa.Integer(), nullable=False),
+                    sa.Column("id", sa.Integer(), primary_key=True, nullable=False),
                     sa.Column("log_id", sa.Integer(), sa.ForeignKey("user_logs.id"), nullable=False),
                     sa.Column("item_id", sa.Integer(), sa.ForeignKey("user_items.id"), nullable=False)
                     )
