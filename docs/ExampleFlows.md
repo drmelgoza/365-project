@@ -54,14 +54,15 @@ he will first start by creating a profile.
 ## Flow 2: Meal Logging
 
 ### Scenario:
-Joseph is has just begun using DataFit, and has just finished his breakfast for the day.
+Joseph has just begun using DataFit, and has just finished his breakfast for the day.
 To keep up with his protein goal, he must now add the meal into the DataFit meal log.
 
 ### Steps:
-- Joseph wants to add his favorite breakfast omelette to track with Datafit. Joseph calls POST `users/4567/items` to add the omelette.
+- Joseph wants to add his favorite breakfast omelet to track with DataFit. Joseph calls `POST /users/4567/items` to add the omelette.
+
 ```
 {
-  "name": "Johnny's Family Omelette",
+  "name": "Johnny's Family Omelet",
   "calories": 450,
   "protein": 35,
   "carbs": 20,
@@ -69,74 +70,94 @@ To keep up with his protein goal, he must now add the meal into the DataFit meal
 }
 ```
 
-- After being created the omelettes's new item id is returned:
+- After being created the omelet's new item id is returned:
 ```
 {
-  "item_id": 1231
+  "item_id": 1231,
+  "user_id": 4567,
   "status": "created"
 }
 ```
 
-users/{users_id}/meal_logs/{2347}
-- using his userid and the needed item id, Joseph calls POST `meal_logs/4567` to log the omelette for breakfast:
+- Using his user id, Joseph calls `POST /users/4567/logs` to create a meal log for breakfast:
 ```
 {
-  "items": [1231]
-  "date": 1/1/21
-  "time": 8:30
-  "meal name": "Breakfast"
+  "month": 1,
+  "day": 1,
+  "year": 2021,
+  "time": "8:30",
+  "category": "Breakfast"
 }
 ```
 
-- Finally, Joseph recieves the following output:
+- Joseph receives the following output:
 ```
 {
-  "status": "logged"
+  "log_id": 1
 }
 ```
 
-- Joseph forgot to log the breakfast sausage that he had as a side with the omelette. He'll create the sausage item first with POST `4567/items`:
+- Joseph links the omelet to his log using `POST logs/1/items`:
+```
+{
+  "item_ids": [1231]
+}
+```
+
+- The output received is then:
+```
+{
+   "item_ids": [1231]
+   "status": "logged"
+}
+```
+
+- Joseph forgot to log the breakfast sausage that he had as a side. He creates the sausage item first with `POST /users/4567/items`:
 ```
 {
   "name": "Super Healthy Sausage",
-  "calories": 450,
+  "calories": 500,
   "protein": 30,
   "carbs": 20,
   "fat": 20
 }
 ```
 
-- He'll retreive the new item id:
+- He receives the new item id:
 ```
 {
-  item_id: 3213
+  "item_id": 3213,
+  "user_id": 4567,
+  "status": "created"
 }
 ```
 
-- And use it to append the log with PATCH `meal_logs/4567`
+- And links it to the same log with `POST /users/4567/logs/1/items`:
 ```
 {
-  "items": [3213]
-  "date": 1/1/21
-  "time": 8:30
+  "item_ids": [3213]
 }
 ```
 
-- The status is then returned:
+- Receiving the output:
 ```
 {
-  "status": "updated"
+   "item_ids": [3213]
+   "status": "logged"
 }
 ```
-  
-- Joseph can now confirm the final log has both items using GET `meal_logs/4567/`:
+
+- Joseph confirms the final log has both items using `GET /users/4567/logs/1`:
 ```
 {
-  "date": 1/1/21
-  "time": 8:30
+  "category": "Breakfast",
+  "month": 1,
+  "day": 1,
+  "year": 2021,
+  "time": "08:30:00",
   "items": [
     {
-      "name": "Johnny's Family Omelette",
+      "name": "Johnny's Family Omelet",
       "calories": 450,
       "protein": 35,
       "carbs": 20,
@@ -144,13 +165,15 @@ users/{users_id}/meal_logs/{2347}
     },
     {
       "name": "Super Healthy Sausage",
-      "calories": 450,
+      "calories": 500,
       "protein": 30,
       "carbs": 20,
       "fat": 20
-    }]
+    }
+  ]
 }
 ```
+
 
 ## Flow 3: Meal Plan
 

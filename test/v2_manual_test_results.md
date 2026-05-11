@@ -51,7 +51,7 @@ To keep up with his protein goal, he must now add the meal into the DataFit meal
 }
 ```
 
-- The output recieved is then:
+- The output received is then:
 ```
 {
    "item_ids": [1231]
@@ -70,7 +70,7 @@ To keep up with his protein goal, he must now add the meal into the DataFit meal
 }
 ```
 
-- He retrieves the new item id:
+- He receives the new item id:
 ```
 {
   "item_id": 3213,
@@ -104,7 +104,7 @@ To keep up with his protein goal, he must now add the meal into the DataFit meal
   "time": "08:30:00",
   "items": [
     {
-      "name": "Johnny's Family Omelette",
+      "name": "Johnny's Family Omelet",
       "calories": 450,
       "protein": 35,
       "carbs": 20,
