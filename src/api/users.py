@@ -218,18 +218,36 @@ class ItemCreateResponse(BaseModel):
 #This will involve creating two new tables: "user_logs" and "log_items"
 #"user_logs" will relate Users to their Logs, while "log_items"
 #will relate logs (by their id value) to individual items.
-    
+
 ##DAVID"S WORK ______________________________________________________##
-        
+
 ##I perosnally do not see a reason to add user_logs, meal_logs can just cotain all of the users logs and if we want a specific one,
 ## we just screach by User_id which is uqiue so we should only get the rows that contain that user. Logs have a lot of users, but the user has
 ## only one log, so its a one to many, no need for extra table
-    
+
 ## Here, you might want to do a join to combine user_items and meal_log that way you can get both. Once again, I not sure what the attributes will
-## end up being so whoever does it can figure out the join stuff    
-    
+## end up being so whoever does it can figure out the join stuff
+
 #Get call to get the items
-@router.get("/{user_id}/log")
+
+class MealLogStatusResponse(BaseModel):
+    status: str
+
+
+class LoggedMealItem(BaseModel):
+    name: str
+    calories: float
+    protein: float
+    carbs: float
+    fat: float
+
+
+class MealLogResponse(BaseModel):
+    date: str
+    time: str
+    items: list[LoggedMealItem]
+
+@router.get("/{user_id}/log", response_model=MealLogResponse)
 def get_all_logs(user_id):
     with db.engine.begin() as connection:
         user_result = connection.execute(
@@ -259,17 +277,25 @@ def get_all_logs(user_id):
                 "user_id": user_id,
             }
         ).all()
-    
+
+    if not users_logs:
+        raise HTTPException(status_code=404, detail="No logs found.")
+
+    # Not completely finished; joins need to be implemented
     All_logs = []
     for logs in users_logs:
         All_logs.append([logs[0], logs[1]])
-    
-    return (f"ITEMS THAT HAVE BEEN LOGGED BY USER {user_id}: {All_logs}")
+
+    return MealLogResponse(
+        date="1/1/21",  # placeholder since not stored yet
+        time=str(users_logs.time),
+        items=All_logs
+    )
 
 
-#POST call to added items, 
+#POST call to added items,
 
-@router.post("/{user_id}/log")
+@router.post("/{user_id}/log", response_model=MealLogStatusResponse)
 def add_to_meal_log(user_id : int, category: str, time):
     with db.engine.begin() as connection:
         user_result = connection.execute(
@@ -287,7 +313,7 @@ def add_to_meal_log(user_id : int, category: str, time):
 
         if not user_result:
          raise HTTPException(status_code=404, detail="User does not exist.")
-  
+
         connection.execute(
             sqlalchemy.text(
                 """
@@ -320,11 +346,11 @@ def add_to_meal_log(user_id : int, category: str, time):
                 """
             )
         )
-    return {"message": "Meal log item added"}
+    return MealLogStatusResponse(status="logged")
 
-#delete to delete items 
+#delete to delete items
 
-@router.delete("/{user_id}/log")
+@router.delete("/{user_id}/log", response_model=MealLogStatusResponse)
 def remove_from_meal_log(user_id : int, category: str, time, Food: FoodItem):
     with db.engine.begin() as connection:
         user_result = connection.execute(
@@ -348,7 +374,7 @@ def remove_from_meal_log(user_id : int, category: str, time, Food: FoodItem):
             sqlalchemy.text(
                 """
                 DELETE FROM meal_log
-                WHERE user_id = :user_id AND category = :category, AND time = :time
+                WHERE user_id = :user_id AND category = :category AND time = :time
 
                 """
             ),
@@ -358,9 +384,9 @@ def remove_from_meal_log(user_id : int, category: str, time, Food: FoodItem):
                 "time": time
                 }
         )
-    
+
 ## When user_items is deleted, related to the meal_log so that the correct row is removed from user_items that related to meal_log
-## Maybe user TIME combined category, or maybe added a date column,       
+## Maybe user TIME combined category, or maybe added a date column,
         connection.execute(
             sqlalchemy.text(
                 """
@@ -376,7 +402,7 @@ def remove_from_meal_log(user_id : int, category: str, time, Food: FoodItem):
             ),
         )
 
-    return {"message": "Meal log item removed"}
+    return MealLogStatusResponse(status="removed")
 
 
 ## END OF DAVID"S WORK__________________________________________________##
