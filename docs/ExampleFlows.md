@@ -72,7 +72,8 @@ To keep up with his protein goal, he must now add the meal into the DataFit meal
 - After being created the omelettes's new item id is returned:
 ```
 {
-  item_id: 1231
+  "item_id": 1231
+  "status": "created"
 }
 ```
 
