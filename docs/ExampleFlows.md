@@ -83,6 +83,7 @@ users/{users_id}/meal_logs/{2347}
   "items": [1231]
   "date": 1/1/21
   "time": 8:30
+  "meal name": "Breakfast"
 }
 ```
 
