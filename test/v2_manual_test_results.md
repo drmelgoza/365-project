@@ -5,11 +5,11 @@ Joseph has just begun using DataFit, and has just finished his breakfast for the
 To keep up with his protein goal, he must now add the meal into the DataFit meal log.
 
 ## Steps:
-- Joseph wants to add his favorite breakfast omelette to track with DataFit. Joseph calls `POST /users/4567/items` to add the omelette.
+- Joseph wants to add his favorite breakfast omelet to track with DataFit. Joseph calls `POST /users/4567/items` to add the omelette.
 
 ```
 {
-  "name": "Johnny's Family Omelette",
+  "name": "Johnny's Family Omelet",
   "calories": 450,
   "protein": 35,
   "carbs": 20,
@@ -17,7 +17,7 @@ To keep up with his protein goal, he must now add the meal into the DataFit meal
 }
 ```
 
-- After being created the omelette's new item id is returned:
+- After being created the omelet's new item id is returned:
 ```
 {
   "item_id": 1231,
@@ -26,7 +26,7 @@ To keep up with his protein goal, he must now add the meal into the DataFit meal
 }
 ```
 
-- Using his userid and the needed item id, Joseph calls `POST /users/4567/logs` to create a meal log for breakfast:
+- Using his user id, Joseph calls `POST /users/4567/logs` to create a meal log for breakfast:
 ```
 {
   "month": 1,
@@ -44,10 +44,18 @@ To keep up with his protein goal, he must now add the meal into the DataFit meal
 }
 ```
 
-- Joseph links the omelette to his log using `POST /users/4567/logs/1/items`:
+- Joseph links the omelet to his log using `POST logs/1/items`:
 ```
 {
   "item_ids": [1231]
+}
+```
+
+- The output received is then:
+```
+{
+   "item_ids": [1231]
+   "status": "logged"
 }
 ```
 
@@ -55,14 +63,14 @@ To keep up with his protein goal, he must now add the meal into the DataFit meal
 ```
 {
   "name": "Super Healthy Sausage",
-  "calories": 450,
+  "calories": 500,
   "protein": 30,
   "carbs": 20,
   "fat": 20
 }
 ```
 
-- He retrieves the new item id:
+- He receives the new item id:
 ```
 {
   "item_id": 3213,
@@ -78,6 +86,14 @@ To keep up with his protein goal, he must now add the meal into the DataFit meal
 }
 ```
 
+- Receiving the output:
+```
+{
+   "item_ids": [3213]
+   "status": "logged"
+}
+```
+
 - Joseph confirms the final log has both items using `GET /users/4567/logs/1`:
 ```
 {
@@ -88,7 +104,7 @@ To keep up with his protein goal, he must now add the meal into the DataFit meal
   "time": "08:30:00",
   "items": [
     {
-      "name": "Johnny's Family Omelette",
+      "name": "Johnny's Family Omelet",
       "calories": 450,
       "protein": 35,
       "carbs": 20,
@@ -96,7 +112,7 @@ To keep up with his protein goal, he must now add the meal into the DataFit meal
     },
     {
       "name": "Super Healthy Sausage",
-      "calories": 450,
+      "calories": 500,
       "protein": 30,
       "carbs": 20,
       "fat": 20
@@ -111,94 +127,172 @@ To keep up with his protein goal, he must now add the meal into the DataFit meal
 
 ## Flow 2
 
-Tested locally against `http://localhost:8000` with API key `tusk`.
-
-1. `POST /users/{user_id}/items` (omelette)
+1. `POST /users/{user_id}/items` (omelet)
 
    1. Curl Command:
    ```
-   curl -X POST 'http://localhost:8000/users/1/items' \
-     -H 'access_token: tusk' \
+   curl -X 'POST' \
+     'https://datafit-meal-tracker.onrender.com/users/3/items' \
+     -H 'accept: application/json' \
+     -H 'access_token: ***' \
      -H 'Content-Type: application/json' \
-     -d '{"name": "Johnny'\''s Family Omelette", "calories": 450, "protein": 35, "carbs": 20, "fat": 15}'
+     -d '{
+     "name": "Johnny'\''s Family Omelet",
+     "calories": 450,
+     "protein": 35,
+     "carbs": 20,
+     "fat": 15
+      }'
    ```
 
    2. Result:
    ```
-   {"item_id":5,"user_id":1,"status":"created"}
+   {
+     "item_id": 1,
+     "user_id": 3,
+     "status": "created"
+   }
    ```
 
 2. `POST /users/{user_id}/logs` (create breakfast log)
 
    1. Curl Command:
    ```
-   curl -X POST 'http://localhost:8000/users/1/logs' \
-     -H 'access_token: tusk' \
+   curl -X 'POST' \
+     'https://datafit-meal-tracker.onrender.com/users/3/logs' \
+     -H 'accept: application/json' \
+     -H 'access_token: ***' \
      -H 'Content-Type: application/json' \
-     -d '{"month": 1, "day": 1, "year": 2021, "time": "08:30", "category": "Breakfast"}'
+     -d '{
+     "month": 1,
+     "day": 1,
+     "year": 2021,
+     "time": "8:30",
+     "category": "Breakfast"
+     }'
    ```
 
    2. Result:
    ```
-   {"log_id":3}
+   {
+     "log_id": 1
+   }
    ```
 
-3. `POST /users/{user_id}/logs/{log_id}/items` (link omelette to log)
+3. `POST logs/{log_id}/items` (link omelet to log)
 
    1. Curl Command:
    ```
-   curl -X POST 'http://localhost:8000/users/1/logs/3/items' \
-     -H 'access_token: tusk' \
+   curl -X 'POST' \
+     'https://datafit-meal-tracker.onrender.com/logs/1/items' \
+     -H 'accept: application/json' \
+     -H 'access_token: ***' \
      -H 'Content-Type: application/json' \
-     -d '{"item_ids": [5]}'
+     -d '{
+     "item_ids": [
+       1
+     ]
+   }'
    ```
 
    2. Result:
    ```
-   {"status":"items added"}
+   {
+     "item_ids": [
+       1
+     ],
+     "status": "logged"
+   }
    ```
 
-4. `POST /users/{user_id}/items` (sausage)
+4. `POST /users/{user_id}/items` (create sausage item)
 
    1. Curl Command:
    ```
-   curl -X POST 'http://localhost:8000/users/1/items' \
-     -H 'access_token: tusk' \
+   curl -X 'POST' \
+     'https://datafit-meal-tracker.onrender.com/users/3/items' \
+     -H 'accept: application/json' \
+     -H 'access_token: ***' \
      -H 'Content-Type: application/json' \
-     -d '{"name": "Super Healthy Sausage", "calories": 450, "protein": 30, "carbs": 20, "fat": 20}'
+     -d '{
+     "name": "Super Healthy Sausage",
+     "calories": 500,
+     "protein": 30,
+     "carbs": 20,
+     "fat": 20
+   }'
    ```
 
    2. Result:
    ```
-   {"item_id":6,"user_id":1,"status":"created"}
+   {
+     "item_id": 2,
+     "user_id": 3,
+     "status": "created"
+   }
    ```
 
 5. `POST /users/{user_id}/logs/{log_id}/items` (link sausage to log)
 
    1. Curl Command:
    ```
-   curl -X POST 'http://localhost:8000/users/1/logs/3/items' \
-     -H 'access_token: tusk' \
+   curl -X 'POST' \
+     'https://datafit-meal-tracker.onrender.com/logs/1/items' \
+     -H 'accept: application/json' \
+     -H 'access_token: ***' \
      -H 'Content-Type: application/json' \
-     -d '{"item_ids": [6]}'
+     -d '{
+     "item_ids": [
+       2
+     ]
+   }'
    ```
 
    2. Result:
    ```
-   {"status":"items added"}
+   {
+     "item_ids": [
+       2
+     ],
+     "status": "logged"
+   }
    ```
 
 6. `GET /users/{user_id}/logs/{log_id}` (confirm both items)
 
    1. Curl Command:
    ```
-   curl -X GET 'http://localhost:8000/users/1/logs/3' \
-     -H 'access_token: tusk'
+   curl -X 'GET' \
+     'https://datafit-meal-tracker.onrender.com/users/3/logs/1' \
+     -H 'accept: application/json' \
+     -H 'access_token: ***
    ```
 
    2. Result:
    ```
-   {"category":"Breakfast","month":1,"day":1,"year":2021,"time":"08:30:00","items":[{"name":"Johnny's Family Omelette","calories":450.0,"protein":35.0,"carbs":20.0,"fat":15.0},{"name":"Super Healthy Sausage","calories":450.0,"protein":30.0,"carbs":20.0,"fat":20.0}]}
+   {
+     "category": "Breakfast",
+     "month": 1,
+     "day": 1,
+     "year": 2021,
+     "time": "08:30:00",
+     "items": [
+       {
+         "name": "Johnny's Family Omelet",
+         "calories": 450,
+         "protein": 35,
+         "carbs": 20,
+         "fat": 15
+       },
+       {
+         "name": "Super Healthy Sausage",
+         "calories": 500,
+         "protein": 30,
+         "carbs": 20,
+         "fat": 20
+       }
+     ]
+   }
    ```
 
 ---
