@@ -300,53 +300,61 @@ To keep up with his protein goal, he must now add the meal into the DataFit meal
 # Flow 3: Meal Plan
 
 ## Scenario:
+
 Jolyne has been using DataFit for the first time today, and wants to see what her day's meals look like overall.
 
 ## Steps:
+
 - Jolyne logs a meal item using `POST /users/{user_id}/items`:
+
 ```
 {
-  "name": "Johnny's Family Omelette",
-  "calories": 450,
-  "protein": 35,
-  "carbs": 20,
-  "fat": 15
+  "name":"Johnny's Family Omelette",
+  "calories":450,
+  "protein":35,
+  "carbs":20,
+  "fat":15
 }
 ```
 
-- She creates a log for Monday's Breakfast using `POST /users/{user_id}/logs`:
+---
+
+- She creates a meal plan for Monday's Breakfast using `POST /plans/{user_id}/plan`:
+
 ```
 {
-  "month": 5,
-  "day": 11,
-  "year": 2026,
-  "time": "09:30",
-  "category": "Breakfast"
+  "name":"Monday Breakfast Plan",
+  "schedule":"09:30"
 }
 ```
 
-- She links the item to the log using `POST /users/{user_id}/logs/{log_id}/items`:
+---
+
+- She adds the meal item to the plan using `POST /plans/{user_id}/plan/{plan_id}/items`:
+
 ```
 {
-  "item_ids": [3213]
+  "item_id":3213,
+  "category":"Breakfast"
 }
 ```
 
-- She retrieves all food logged for that entry using `GET /users/{user_id}/logs/{log_id}`:
+---
+
+- She retrieves the full meal plan using `GET /plans/{user_id}/plan`:
+
 ```
 {
-  "category": "Breakfast",
-  "month": 5,
-  "day": 11,
-  "year": 2026,
-  "time": "09:30:00",
+  "day":"Monday Breakfast Plan",
+  "time":"09:30",
+  "category":"Breakfast",
   "items": [
     {
-      "name": "Johnny's Family Omelette",
-      "calories": 450,
-      "protein": 35,
-      "carbs": 20,
-      "fat": 15
+      "name":"Johnny's Family Omelette",
+      "calories":450,
+      "protein":35,
+      "carbs":20,
+      "fat":15
     }
   ]
 }
