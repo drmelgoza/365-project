@@ -170,7 +170,7 @@ def add_meal_to_plan(user_id: int, plan_id: int, new_item: MealPlanAdd):
         plan_id=plan_id,
         item_id=new_item.item_id,
         user_id=user_id,
-        status="added"
+        status="items added"
     )
 
 @router.get("/{user_id}/plan", response_model=UserPlansLogResponse)

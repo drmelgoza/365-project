@@ -357,13 +357,13 @@ Jolyne has been using DataFit for the first time today, and wants to see what he
 # Test Results
 
 ## Flow 3
-Tested locally against `http://localhost:8000` with API key `tusk`.
+Tested locally against `http://localhost:3000` with API key `tusk`.
 
 1. `POST /users/{user_id}/items`
 
    1. Curl Command:
    ```
-   curl -X POST 'http://localhost:8000/users/1/items' \
+   curl -X POST 'http://localhost:3000/users/1/items' \
      -H 'access_token: tusk' \
      -H 'Content-Type: application/json' \
      -d '{"name": "Johnny'\''s Family Omelette", "calories": 450, "protein": 35, "carbs": 20, "fat": 15}'
@@ -374,45 +374,57 @@ Tested locally against `http://localhost:8000` with API key `tusk`.
    {"item_id":7,"user_id":1,"status":"created"}
    ```
 
-2. `POST /users/{user_id}/logs` (create Breakfast log)
+2. `POST /plans/{user_id}/plan` create meal plan
 
    1. Curl Command:
    ```
-   curl -X POST 'http://localhost:8000/users/1/logs' \
-     -H 'access_token: tusk' \
-     -H 'Content-Type: application/json' \
-     -d '{"month": 5, "day": 11, "year": 2026, "time": "09:30", "category": "Breakfast"}'
+   curl-X POST'http://localhost:3000/plans/1/plan' \
+     -H'access_token: tusk' \
+     -H'Content-Type: application/json' \
+     -d'{"name": "Monday Breakfast Plan", "schedule": "09:30"}'
    ```
 
    2. Result:
    ```
-   {"log_id":4}
+   {"plan_id":2,"user_id":1,"status":"created"}
    ```
 
-3. `POST /users/{user_id}/logs/{log_id}/items` (link omelette to log)
-
+3. `POST /plans/{user_id}/plan/{plan_id}/items` add omelette to plan
    1. Curl Command:
    ```
-   curl -X POST 'http://localhost:8000/users/1/logs/4/items' \
-     -H 'access_token: tusk' \
-     -H 'Content-Type: application/json' \
-     -d '{"item_ids": [7]}'
+   curl -X POST "http://localhost:3000/plans/1/plan/4/items" \
+     -H "access_token: tusk" \
+     -H "Content-Type: application/json" \
+     -d '{"item_id": 4, "category": "Breakfast"}'
    ```
 
    2. Result:
    ```
-   {"status":"items added"}
+   {"plan_id":4,"item_id":4,"user_id":1,"status":"items added"}
    ```
 
 4. `GET /users/{user_id}/logs/{log_id}` (retrieve full log)
 
    1. Curl Command:
    ```
-   curl -X GET 'http://localhost:8000/users/1/logs/4' \
-     -H 'access_token: tusk'
+   curl-X GET'http://localhost:3000/plans/1/plan' \
+     -H'access_token: tusk'
    ```
 
    2. Result:
    ```
-   {"category":"Breakfast","month":5,"day":11,"year":2026,"time":"09:30:00","items":[{"name":"Johnny's Family Omelette","calories":450.0,"protein":35.0,"carbs":20.0,"fat":15.0}]}
+   {
+     "day":"Monday Breakfast Plan",
+     "time":"09:30",
+     "category":"Breakfast",
+     "items": [
+       {
+         "name":"Johnny's Family Omelette",
+         "calories":450.0,
+         "protein":35.0,
+         "carbs":20.0,
+         "fat":15.0
+       }
+     ]
+   }
    ```
