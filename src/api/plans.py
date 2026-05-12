@@ -20,6 +20,16 @@ class MealPlanCreateResponse(BaseModel):
     user_id: int
     status: str
 
+class MealPlanAdd(BaseModel):
+    item_id: int
+    category: str
+
+
+class MealPlanAddResponse(BaseModel):
+    plan_id: int
+    item_id: int
+    user_id: int
+    status: str
 
 class UserPlanItem(BaseModel):
     name: str
@@ -49,8 +59,12 @@ class UserPlansRemoveItemResponse(BaseModel):
     item_id: int
     status: str
 
+class UserPlansRemovePlanResponse(BaseModel):
+    plan_id: int
+    status: str
+
 @router.post("/{user_id}/plan", response_model=MealPlanCreateResponse)
-def add_meal_to_plan(user_id: int, new_plan: MealPlanCreate):
+def create_meal_plan(user_id: int, new_plan: MealPlanCreate):
     with db.engine.begin() as conn:
         user_result = conn.execute(
             sqlalchemy.text(
@@ -65,23 +79,6 @@ def add_meal_to_plan(user_id: int, new_plan: MealPlanCreate):
 
         if not user_result:
             raise HTTPException(status_code=404, detail="User does not exist.")
-
-        item_result = conn.execute(
-            sqlalchemy.text(
-                """
-                SELECT 1
-                FROM user_items
-                WHERE id = :item_id AND user_id = :user_id
-                """
-            ),
-            [{
-                "item_id": new_plan.item_id,
-                "user_id": user_id
-            }]
-        ).one_or_none()
-
-        if not item_result:
-            raise HTTPException(status_code=404, detail="Item does not exist for this user.")
 
         plan_result = conn.execute(
             sqlalchemy.text(
@@ -98,30 +95,15 @@ def add_meal_to_plan(user_id: int, new_plan: MealPlanCreate):
             }]
         ).one()
 
-        conn.execute(
-            sqlalchemy.text(
-                """
-                INSERT INTO plan_items (plan_id, item_id, category)
-                VALUES (:plan_id, :item_id, :category)
-                """
-            ),
-            [{
-                "plan_id": plan_result.id,
-                "item_id": new_plan.item_id,
-                "category": new_plan.category
-            }]
-        )
-
     return MealPlanCreateResponse(
         plan_id=plan_result.id,
-        item_id=new_plan.item_id,
         user_id=user_id,
         status="created"
     )
 
-@router.get("/{user_id}/plan", response_model=UserPlansLogResponse)
-def get_meal_plan(user_id: int):
-    with db.engine.connect() as conn:
+@router.post("/{user_id}/plan/{plan_id}/items", response_model=MealPlanAddResponse)
+def add_meal_to_plan(user_id: int, plan_id: int, new_item: MealPlanAdd):
+    with db.engine.begin() as conn:
         user_result = conn.execute(
             sqlalchemy.text(
                 """
@@ -139,9 +121,97 @@ def get_meal_plan(user_id: int):
         plan_result = conn.execute(
             sqlalchemy.text(
                 """
+                SELECT 1
+                FROM user_plans
+                WHERE id = :plan_id AND user_id = :user_id
+                """
+            ),
+            [{
+                "plan_id": plan_id,
+                "user_id": user_id
+            }]
+        ).one_or_none()
+
+        if not plan_result:
+            raise HTTPException(status_code=404, detail="Plan does not exist for this user.")
+
+        item_result = conn.execute(
+            sqlalchemy.text(
+                """
+                SELECT 1
+                FROM user_items
+                WHERE id = :item_id AND user_id = :user_id
+                """
+            ),
+            [{
+                "item_id": new_item.item_id,
+                "user_id": user_id
+            }]
+        ).one_or_none()
+
+        if not item_result:
+            raise HTTPException(status_code=404, detail="Item does not exist for this user.")
+
+        conn.execute(
+            sqlalchemy.text(
+                """
+                INSERT INTO plan_items (plan_id, item_id, category)
+                VALUES (:plan_id, :item_id, :category)
+                """
+            ),
+            [{
+                "plan_id": plan_id,
+                "item_id": new_item.item_id,
+                "category": new_item.category
+            }]
+        )
+
+    return MealPlanAddResponse(
+        plan_id=plan_id,
+        item_id=new_item.item_id,
+        user_id=user_id,
+        status="added"
+    )
+
+@router.get("/{user_id}/plan", response_model=UserPlansLogResponse)
+def get_meal_plan(user_id: int):
+    with db.engine.connect() as conn:
+        # Check user exists
+        user_result = conn.execute(
+            sqlalchemy.text(
+                """
+                SELECT 1
+                FROM users
+                WHERE id = :user_id
+                """
+            ),
+            [{"user_id": user_id}]
+        ).one_or_none()
+
+        if not user_result:
+            raise HTTPException(status_code=404, detail="User does not exist.")
+
+        # Check plan exists (even if empty)
+        plan_exists = conn.execute(
+            sqlalchemy.text(
+                """
+                SELECT name, schedule
+                FROM user_plans
+                WHERE user_id = :user_id
+                LIMIT 1
+                """
+            ),
+            [{"user_id": user_id}]
+        ).one_or_none()
+
+        if not plan_exists:
+            raise HTTPException(status_code=404, detail="User plan does not exist.")
+
+        # Get items (may be empty)
+        results = conn.execute(
+            sqlalchemy.text(
+                """
                 SELECT
-                    up.name AS day,
-                    up.schedule AS time,
                     pi.category,
                     ui.name,
                     ui.calories,
@@ -157,28 +227,24 @@ def get_meal_plan(user_id: int):
             [{"user_id": user_id}]
         ).all()
 
-        if not plan_result:
-            raise HTTPException(status_code=404, detail="User plan does not exist.")
-
     items = []
 
-    for result in plan_result:
+    for r in results:
         items.append(
             UserPlanItem(
-                name=result.name,
-                calories=result.calories,
-                protein=result.protein,
-                carbs=result.carbs,
-                fat=result.fat
+                name=r.name,
+                calories=r.calories,
+                protein=r.protein,
+                carbs=r.carbs,
+                fat=r.fat
             )
         )
 
-    first = plan_result[0]
-
+    # Use plan info even if no items
     return UserPlansLogResponse(
-        day=first.day,
-        time=str(first.time),
-        category=first.category,
+        day=plan_exists.name,
+        time=str(plan_exists.schedule),
+        category=results[0].category if results else "None",
         items=items
     )
 
@@ -312,7 +378,7 @@ def get_meal_plan_by_day(user_id: int, plan_name: str):
         items=items
     )
 
-@router.delete("/{user_id}/plan/{item_id}", response_model=UserPlansRemoveItemResponse)
+@router.delete("/{user_id}/plan/items/{item_id}", response_model=UserPlansRemoveItemResponse)
 def remove_item_from_plan(user_id: int, item_id: int):
     with db.engine.begin() as conn:
         user_result = conn.execute(
@@ -366,5 +432,67 @@ def remove_item_from_plan(user_id: int, item_id: int):
 
     return UserPlansRemoveItemResponse(
         item_id=item_id,
+        status="removed"
+    )
+
+@router.delete("/{user_id}/plan/{plan_id}", response_model=UserPlansRemovePlanResponse)
+def remove_plan(user_id: int, plan_id: int):
+    with db.engine.begin() as conn:
+        user_result = conn.execute(
+            sqlalchemy.text(
+                """
+                SELECT 1
+                FROM users
+                WHERE id = :user_id
+                """
+            ),
+            [{"user_id": user_id}]
+        ).one_or_none()
+
+        if not user_result:
+            raise HTTPException(status_code=404, detail="User does not exist.")
+
+        plan_result = conn.execute(
+            sqlalchemy.text(
+                """
+                SELECT 1
+                FROM user_plans
+                WHERE id = :plan_id AND user_id = :user_id
+                """
+            ),
+            [{
+                "plan_id": plan_id,
+                "user_id": user_id
+            }]
+        ).one_or_none()
+
+        if not plan_result:
+            raise HTTPException(status_code=404, detail="Plan does not exist for this user.")
+
+        conn.execute(
+            sqlalchemy.text(
+                """
+                DELETE FROM plan_items
+                WHERE plan_id = :plan_id
+                """
+            ),
+            [{"plan_id": plan_id}]
+        )
+
+        conn.execute(
+            sqlalchemy.text(
+                """
+                DELETE FROM user_plans
+                WHERE id = :plan_id AND user_id = :user_id
+                """
+            ),
+            [{
+                "plan_id": plan_id,
+                "user_id": user_id
+            }]
+        )
+
+    return UserPlansRemovePlanResponse(
+        plan_id=plan_id,
         status="removed"
     )
