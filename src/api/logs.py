@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import sqlalchemy
 from src.api import auth
 from src import database as db
@@ -11,18 +11,26 @@ router = APIRouter(
     dependencies=[Depends(auth.get_api_key)],
 )
 
-class NewLogItems(BaseModel):
-    item_ids: list[int]
+
+class LoggedMealItem(BaseModel):
+    name: str
+    calories: float = Field(ge=0)
+    protein: float = Field(ge=0)
+    carbs: float = Field(ge=0)
+    fat: float = Field(ge=0)
+
 
 class LogStatusResponse(BaseModel):
     item_ids: list[int]
     status: str
 
+
 class ItemDeleteResponse(BaseModel):
     status: str
 
+
 @router.post("/{log_id}/items", response_model=LogStatusResponse)
-def add_to_log(log_id: int, items: NewLogItems):
+def add_to_log(log_id: int, items: "NewLogItems"):
     """Add one or more food items to an existing meal log."""
     with db.engine.begin() as connection:
         log_result = connection.execute(
@@ -33,9 +41,7 @@ def add_to_log(log_id: int, items: NewLogItems):
                 WHERE id = :log_id
                 """
             ),
-            [{
-                "log_id": log_id,
-            }]
+            [{"log_id": log_id}]
         ).one_or_none()
 
         if not log_result:
@@ -52,10 +58,9 @@ def add_to_log(log_id: int, items: NewLogItems):
                     WHERE id = :item_id
                     """
                 ),
-                [{
-                    "item_id": item_id,
-                }]
+                [{"item_id": item_id}]
             ).one_or_none()
+
             if not item_exists:
                 raise HTTPException(status_code=404, detail=f"Item {item_id} not found.")
 
@@ -67,16 +72,16 @@ def add_to_log(log_id: int, items: NewLogItems):
                     VALUES (:log_id, :item_id)
                     """
                 ),
-                [{
-                    "log_id": log_id,
-                    "item_id": item_id
-                }]
+                [{"log_id": log_id, "item_id": item_id}]
             )
             logged_itms.append(item_id)
 
     return LogStatusResponse(item_ids=logged_itms, status="logged")
 
-#delete to delete items
+
+class NewLogItems(BaseModel):
+    item_ids: list[int]
+
 
 @router.delete("/{log_id}/items/{item_id}", response_model=ItemDeleteResponse)
 def remove_from_log(log_id: int, item_id: int):
@@ -89,15 +94,13 @@ def remove_from_log(log_id: int, item_id: int):
                 WHERE id = :log_id
                 """
             ),
-            [{
-                "log_id": log_id,
-            }]
+            [{"log_id": log_id}]
         ).one_or_none()
 
         if not log_result:
             raise HTTPException(status_code=404, detail="Log does not exist.")
 
-        connection.execute(
+        result = connection.execute(
             sqlalchemy.text(
                 """
                 DELETE FROM log_items
@@ -105,11 +108,11 @@ def remove_from_log(log_id: int, item_id: int):
                 AND item_id = :item_id
                 """
             ),
-            [{
-                "log_id": log_id,
-                "item_id": item_id
-            }]
+            [{"log_id": log_id, "item_id": item_id}]
         )
 
-    return ItemDeleteResponse(status="deleted")
+        #return 404 if the item was never in this log
+        if result.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Item not found in this log.")
 
+    return ItemDeleteResponse(status="deleted")

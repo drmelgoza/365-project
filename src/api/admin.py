@@ -14,13 +14,16 @@ router = APIRouter(
 def reset():
     """
     Reset the tracker database by removing all users and user objects.
+    Truncates all tables explicitly, resets serial sequences, and cascades
+    to dependent tables (user_logs, log_items, user_items, meal_plan, macro_goal).
     """
 
     with db.engine.begin() as connection:
         connection.execute(
             sqlalchemy.text(
                 """
-                TRUNCATE users CASCADE
+                TRUNCATE users, user_items, user_logs, log_items, meal_plan, macro_goal
+                RESTART IDENTITY CASCADE
                 """
             )
         )

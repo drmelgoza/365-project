@@ -1,8 +1,11 @@
+from enum import Enum
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 import sqlalchemy
 from src.api import auth
 from src import database as db
+
 
 router = APIRouter(
     prefix="/plans",
@@ -10,15 +13,27 @@ router = APIRouter(
     dependencies=[Depends(auth.get_api_key)],
 )
 
-# input and output response models for adding an item to meal plan
+
+#models
+
+class ScheduleType(str, Enum):
+    daily = "daily"
+    weekly = "weekly"
+    custom = "custom"
+
+
 class MealPlanCreate(BaseModel):
     name: str
-    schedule: str
+    schedule_type: ScheduleType
+    # days is only relevant for weekly or custom schedules
+    days: Optional[list[str]] = None
+
 
 class MealPlanCreateResponse(BaseModel):
     plan_id: int
     user_id: int
     status: str
+
 
 class MealPlanAdd(BaseModel):
     item_id: int
@@ -31,6 +46,7 @@ class MealPlanAddResponse(BaseModel):
     user_id: int
     status: str
 
+
 class UserPlanItem(BaseModel):
     name: str
     calories: float
@@ -40,28 +56,34 @@ class UserPlanItem(BaseModel):
 
 
 class UserPlansLogResponse(BaseModel):
-    day: str
-    time: str
-    category: str
+    plan_name: str
+    schedule: str
     items: list[UserPlanItem]
+
 
 class UserPlansCategoryLogResponse(BaseModel):
     category: str
     schedule: str
     items: list[UserPlanItem]
 
+
 class UserPlansDayResponse(BaseModel):
     plan_name: str
     schedule: str
     items: list[UserPlanItem]
 
+
 class UserPlansRemoveItemResponse(BaseModel):
     item_id: int
     status: str
 
+
 class UserPlansRemovePlanResponse(BaseModel):
     plan_id: int
     status: str
+
+
+#endpoints
 
 @router.post("/{user_id}/plan", response_model=MealPlanCreateResponse)
 def create_meal_plan(user_id: int, new_plan: MealPlanCreate):
@@ -80,6 +102,12 @@ def create_meal_plan(user_id: int, new_plan: MealPlanCreate):
         if not user_result:
             raise HTTPException(status_code=404, detail="User does not exist.")
 
+        # encode days into schedule string if provided (e.g. "weekly:monday,thursday")
+        if new_plan.days:
+            schedule_str = f"{new_plan.schedule_type.value}:{','.join(new_plan.days)}"
+        else:
+            schedule_str = new_plan.schedule_type.value
+
         plan_result = conn.execute(
             sqlalchemy.text(
                 """
@@ -91,7 +119,7 @@ def create_meal_plan(user_id: int, new_plan: MealPlanCreate):
             [{
                 "user_id": user_id,
                 "name": new_plan.name,
-                "schedule": new_plan.schedule
+                "schedule": schedule_str
             }]
         ).one()
 
@@ -100,6 +128,7 @@ def create_meal_plan(user_id: int, new_plan: MealPlanCreate):
         user_id=user_id,
         status="created"
     )
+
 
 @router.post("/{user_id}/plan/{plan_id}/items", response_model=MealPlanAddResponse)
 def add_meal_to_plan(user_id: int, plan_id: int, new_item: MealPlanAdd):
@@ -126,10 +155,7 @@ def add_meal_to_plan(user_id: int, plan_id: int, new_item: MealPlanAdd):
                 WHERE id = :plan_id AND user_id = :user_id
                 """
             ),
-            [{
-                "plan_id": plan_id,
-                "user_id": user_id
-            }]
+            [{"plan_id": plan_id, "user_id": user_id}]
         ).one_or_none()
 
         if not plan_result:
@@ -143,10 +169,7 @@ def add_meal_to_plan(user_id: int, plan_id: int, new_item: MealPlanAdd):
                 WHERE id = :item_id AND user_id = :user_id
                 """
             ),
-            [{
-                "item_id": new_item.item_id,
-                "user_id": user_id
-            }]
+            [{"item_id": new_item.item_id, "user_id": user_id}]
         ).one_or_none()
 
         if not item_result:
@@ -173,10 +196,11 @@ def add_meal_to_plan(user_id: int, plan_id: int, new_item: MealPlanAdd):
         status="items added"
     )
 
-@router.get("/{user_id}/plan", response_model=UserPlansLogResponse)
+
+@router.get("/{user_id}/plan", response_model=list[UserPlansLogResponse])
 def get_meal_plan(user_id: int):
+    """Return all plans for the user instead of just the first one."""
     with db.engine.connect() as conn:
-        # Check user exists
         user_result = conn.execute(
             sqlalchemy.text(
                 """
@@ -191,62 +215,57 @@ def get_meal_plan(user_id: int):
         if not user_result:
             raise HTTPException(status_code=404, detail="User does not exist.")
 
-        # Check plan exists (even if empty)
-        plan_exists = conn.execute(
+        plans = conn.execute(
             sqlalchemy.text(
                 """
-                SELECT name, schedule
+                SELECT id, name, schedule
                 FROM user_plans
                 WHERE user_id = :user_id
-                LIMIT 1
-                """
-            ),
-            [{"user_id": user_id}]
-        ).one_or_none()
-
-        if not plan_exists:
-            raise HTTPException(status_code=404, detail="User plan does not exist.")
-
-        # Get items (may be empty)
-        results = conn.execute(
-            sqlalchemy.text(
-                """
-                SELECT
-                    pi.category,
-                    ui.name,
-                    ui.calories,
-                    ui.protein,
-                    ui.carbs,
-                    ui.fat
-                FROM plan_items pi
-                JOIN user_plans up ON pi.plan_id = up.id
-                JOIN user_items ui ON pi.item_id = ui.id
-                WHERE up.user_id = :user_id
+                ORDER BY id
                 """
             ),
             [{"user_id": user_id}]
         ).all()
 
-    items = []
+        if not plans:
+            raise HTTPException(status_code=404, detail="User has no plans.")
 
-    for r in results:
-        items.append(
-            UserPlanItem(
-                name=r.name,
-                calories=r.calories,
-                protein=r.protein,
-                carbs=r.carbs,
-                fat=r.fat
-            )
-        )
+        response = []
+        for plan in plans:
+            items_result = conn.execute(
+                sqlalchemy.text(
+                    """
+                    SELECT
+                        ui.name,
+                        ui.calories,
+                        ui.protein,
+                        ui.carbs,
+                        ui.fat
+                    FROM plan_items pi
+                    JOIN user_items ui ON pi.item_id = ui.id
+                    WHERE pi.plan_id = :plan_id
+                    """
+                ),
+                [{"plan_id": plan.id}]
+            ).all()
 
-    # Use plan info even if no items
-    return UserPlansLogResponse(
-        day=plan_exists.name,
-        time=str(plan_exists.schedule),
-        category=results[0].category if results else "None",
-        items=items
-    )
+            response.append(UserPlansLogResponse(
+                plan_name=plan.name,
+                schedule=str(plan.schedule),
+                items=[
+                    UserPlanItem(
+                        name=r.name,
+                        calories=r.calories,
+                        protein=r.protein,
+                        carbs=r.carbs,
+                        fat=r.fat
+                    )
+                    for r in items_result
+                ]
+            ))
+
+    return response
+
 
 @router.get("/{user_id}/plan/category", response_model=UserPlansCategoryLogResponse)
 def get_meal_plan_by_category(user_id: int, category: str):
@@ -283,35 +302,30 @@ def get_meal_plan_by_category(user_id: int, category: str):
                 AND pi.category = :category
                 """
             ),
-            [{
-                "user_id": user_id,
-                "category": category
-            }]
+            [{"user_id": user_id, "category": category}]
         ).all()
 
         if not results:
             raise HTTPException(status_code=404, detail="No plans found for this category.")
 
-    items = []
-
-    for r in results:
-        items.append(
-            UserPlanItem(
-                name=r.name,
-                calories=r.calories,
-                protein=r.protein,
-                carbs=r.carbs,
-                fat=r.fat
-            )
+    items = [
+        UserPlanItem(
+            name=r.name,
+            calories=r.calories,
+            protein=r.protein,
+            carbs=r.carbs,
+            fat=r.fat
         )
+        for r in results
+    ]
 
     first = results[0]
-
     return UserPlansCategoryLogResponse(
         category=first.category,
         schedule=str(first.schedule),
         items=items
     )
+
 
 @router.get("/{user_id}/plan/day", response_model=UserPlansDayResponse)
 def get_meal_plan_by_day(user_id: int, plan_name: str):
@@ -348,35 +362,30 @@ def get_meal_plan_by_day(user_id: int, plan_name: str):
                 AND up.name = :plan_name
                 """
             ),
-            [{
-                "user_id": user_id,
-                "plan_name": plan_name
-            }]
+            [{"user_id": user_id, "plan_name": plan_name}]
         ).all()
 
         if not results:
             raise HTTPException(status_code=404, detail="No plans found with this name.")
 
-    items = []
-
-    for r in results:
-        items.append(
-            UserPlanItem(
-                name=r.name,
-                calories=r.calories,
-                protein=r.protein,
-                carbs=r.carbs,
-                fat=r.fat
-            )
+    items = [
+        UserPlanItem(
+            name=r.name,
+            calories=r.calories,
+            protein=r.protein,
+            carbs=r.carbs,
+            fat=r.fat
         )
+        for r in results
+    ]
 
     first = results[0]
-
     return UserPlansDayResponse(
         plan_name=first.plan_name,
         schedule=str(first.schedule),
         items=items
     )
+
 
 @router.delete("/{user_id}/plan/items/{item_id}", response_model=UserPlansRemoveItemResponse)
 def remove_item_from_plan(user_id: int, item_id: int):
@@ -405,10 +414,7 @@ def remove_item_from_plan(user_id: int, item_id: int):
                 AND pi.item_id = :item_id
                 """
             ),
-            [{
-                "user_id": user_id,
-                "item_id": item_id
-            }]
+            [{"user_id": user_id, "item_id": item_id}]
         ).one_or_none()
 
         if not item_result:
@@ -424,16 +430,11 @@ def remove_item_from_plan(user_id: int, item_id: int):
                 AND plan_items.item_id = :item_id
                 """
             ),
-            [{
-                "user_id": user_id,
-                "item_id": item_id
-            }]
+            [{"user_id": user_id, "item_id": item_id}]
         )
 
-    return UserPlansRemoveItemResponse(
-        item_id=item_id,
-        status="removed"
-    )
+    return UserPlansRemoveItemResponse(item_id=item_id, status="removed")
+
 
 @router.delete("/{user_id}/plan/{plan_id}", response_model=UserPlansRemovePlanResponse)
 def remove_plan(user_id: int, plan_id: int):
@@ -460,10 +461,7 @@ def remove_plan(user_id: int, plan_id: int):
                 WHERE id = :plan_id AND user_id = :user_id
                 """
             ),
-            [{
-                "plan_id": plan_id,
-                "user_id": user_id
-            }]
+            [{"plan_id": plan_id, "user_id": user_id}]
         ).one_or_none()
 
         if not plan_result:
@@ -486,13 +484,7 @@ def remove_plan(user_id: int, plan_id: int):
                 WHERE id = :plan_id AND user_id = :user_id
                 """
             ),
-            [{
-                "plan_id": plan_id,
-                "user_id": user_id
-            }]
+            [{"plan_id": plan_id, "user_id": user_id}]
         )
 
-    return UserPlansRemovePlanResponse(
-        plan_id=plan_id,
-        status="removed"
-    )
+    return UserPlansRemovePlanResponse(plan_id=plan_id, status="removed")

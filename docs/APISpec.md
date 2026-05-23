@@ -1,180 +1,115 @@
 # API Specification for Data-Fit
 
-# 1. Profiles
+> **Naming convention:** all endpoints use **snake_case** path parameters and **snake_case** JSON field names.
 
-Profiles allow users to begin using the app by creating a profile of health information.
-The health statistics can be used to help users make decisions about their meals
-and determine health goals.
+---
+
+# 1. Users
+
+Users represent a health profile inside Data-Fit. All user data (logs, items, plans) is scoped to a `user_id`.
 
 ## Flow Order
 
-1. Create Profile
-2. Get Profile
+1. Create User
+2. Get User
+3. Update User (optional)
 
-## 1.1 Create Profile (POST)
-
-### Endpoint: `/profiles`
+## 1.1 Create User — `POST /users/`
 
 Create a new user profile.
 
 ### Request
 
 ```json
-[
-  {
-    "profile_name": "John",
-    "age": 25,
-    "weight": 70,
-    "height": 175
-  }
-]
-```
-
-### Response
-
-```json
 {
-  "profile_id": "p123"
+  "username": "karate_kid_84",
+  "name": "Daniel",
+  "email": "daniel@somemail.com",
+  "height": 68,
+  "weight": 125,
+  "age": 19
 }
 ```
 
-## 1.2 Get Profile (GET)
+> `height` and `weight` must be ≥ 0. `age` must be a non-negative integer. `email` must be a valid e-mail address.
 
-### Endpoint: `/profiles/{profile_id}`
-
-Retrieve profile information.
-
-### Response
+### Response `200`
 
 ```json
 {
-  "profile_id": "p123",
-  "profile_name": "John",
-  "age": 25,
-  "weight": 70,
-  "height": 175
+  "user_id": 20
 }
 ```
 
-# 2. Agendas
+### Error Responses
 
-Agendas are created as an organized list of goals for the user.
-Users will use agenda goals to determine if the meals they are tracking are
-benefitting their health goals.
+- `409 Conflict`: A user with this e-mail already exists.
 
-## Flow Order
+---
 
-1. Create Agenda
-2. Add Agenda Goal
-3. Get Agenda Goals
-4. Delete Agenda Goals (as needed)
+## 1.2 Get User — `GET /users/{user_id}`
 
-## 2.1 Create Agenda (POST)
+Retrieve a user's profile information.
 
-### Endpoint: `/agendas`
+### Response `200`
 
-Create a new agenda for a user.
+```json
+{
+  "username": "karate_kid_84",
+  "name": "Daniel",
+  "email": "daniel@somemail.com",
+  "height": 68,
+  "weight": 125,
+  "age": 19
+}
+```
+
+### Error Responses
+
+- `404 Not Found`: User does not exist.
+
+---
+
+## 1.3 Update User — `PATCH /users/{user_id}`
+
+Update one or more of a user's physical stats. Only fields provided (non-null) are updated.
 
 ### Request
 
 ```json
 {
-  "profile_id": "p123"
+  "height": 70
 }
 ```
 
-### Response
+> Omit any field you do not wish to change. All provided values must be ≥ 0.
+
+### Response `200`
 
 ```json
 {
-  "agenda_id": "a456"
+  "user_id": 20,
+  "status": "updated"
 }
 ```
 
-## 2.2 Add Goal to Agenda (PUT)
+### Error Responses
 
-### Endpoint: `/agendas/{agenda_id}/goals`
+- `404 Not Found`: User does not exist.
 
-Add a goal to the agenda.
+---
+
+# 2. Food Items
+
+Users maintain a personal library of food items with their macro-nutrient facts. Items are referenced when logging meals.
+
+## 2.1 Create Food Item — `POST /users/{user_id}/items`
 
 ### Request
 
 ```json
 {
-  "nutrient_name": "protein",
-  "nutrient_quantity": 100,
-  "nutrient_unit": "g",
-  "nutrient_frequency": 1,
-  "nutrient_freq_unit": "day"
-}
-```
-
-### Response
-
-```json
-{
-  "success": true
-}
-```
-
-## 2.3 Get Goals for Agenda (GET)
-
-### Endpoint: `/agendas/{agenda_id}/goals`
-
-Retrieve all goals in a user’s agenda.
-
-### Response
-
-```json
-{
-  "goals": [
-    {
-      "nutrient_name": "protein",
-      "nutrient_quantity": 100,
-      "nutrient_unit": "g",
-      "nutrient_frequency": 1,
-      "nutrient_freq_unit": "day"
-    }
-  ]
-}
-```
-
-## 2.4 Delete Goal from Agenda (DELETE)
-
-### Endpoint: `/agendas/{agenda_id}/goals/{goal_id}`
-
-Remove a goal from a users agenda.
-
-### Response
-
-```json
-{
-  "success": true
-}
-```
-
-# 3. Meal Logging
-
-This set of endpoints is used when a user logs a new meal into the system. The user submits meal details, assigns a category, and records the time. This allows the system to store structured meal data for tracking and analysis.
-
-## Flow Order
-
-1. Create Meal Log
-2. Assign Category to Meal
-3. Update Meal Time
-
-## 3.1 Create Meal Log (POST)
-
-**Endpoint:** `/users/{userId}/meal-logs`
-
-The user submits basic meal details (name and nutritional information).
-The system creates a new meal record and returns a unique meal ID to identify it.
-
-### Input
-
-```json
-{
-  "name": "Grilled Chicken Salad",
+  "name": "Johnny's Family Omelette",
   "calories": 450,
   "protein": 35,
   "carbs": 20,
@@ -182,183 +117,241 @@ The system creates a new meal record and returns a unique meal ID to identify it
 }
 ```
 
-### Output
+> All nutritional values must be ≥ 0.
+
+### Response `200`
 
 ```json
 {
-  "mealId": "m101",
-  "userId": "12345",
+  "item_id": 1231,
+  "user_id": 4567,
   "status": "created"
 }
 ```
 
-## 3.2 Assign Category to Meal (PUT)
+### Error Responses
 
-**Endpoint:** `/users/{userId}/meals/{mealId}/category`
+- `404 Not Found`: User does not exist.
 
-The user assigns a category (e.g., breakfast, lunch, dinner) to the created meal.
-The system updates the meal with the selected category and confirms the change.
+---
 
-### Input
+# 3. Meal Logs
 
-```
-{
-  "category":"Lunch"
-}
-```
-
-### Output
-
-```json
-{
-  "mealId": "m101",
-  "category": "Lunch",
-  "status": "updated"
-}
-```
-
-## 3.3 Update Meal Time (PUT)
-
-**Endpoint:** `/users/{userId}/meals/{mealId}/time`
-
-The user records the time the meal was consumed.
-The system updates the meal with the provided timestamp and confirms the update.
-
-### Input
-
-```json
-{
-  "time": "2026-04-20T12:30:00Z"
-}
-```
-
-### Output
-
-```json
-{
-  "mealId": "m101",
-  "time": "2026-04-20T12:30:00Z",
-  "status": "updated"
-}
-```
-
-# 4. Meals Tracking
-
-This set of endpoints is used when a user wants to review their meal information in the app. The user first retrieves their logged meals, then views the meal categories those entries fall under, and finally checks overall meal statistics. This helps the user understand their eating habits and track nutrition over time.
+A meal log groups food items eaten during a single meal category on a given date.
 
 ## Flow Order
 
-1. Get Meals
-2. Get Categories
-3. Get Meal Stats
+1. Create Meal Log
+2. Add Item(s) to Log
+3. Get Log (to verify)
+4. Remove Item from Log (if needed)
 
-## 4.1 Get Meals (GET)
+## 3.1 Create Meal Log — `POST /users/{user_id}/logs`
 
-**Endpoint:** `/users/{userId}/meals`
-
-This endpoint is called when the user wants to see the meals they have logged.
-
-### Input
-
-```
-GET /users/12345/meals
-```
-
-### Output
+### Request
 
 ```json
 {
-  "userId": "12345",
-  "meals": [
+  "date": "2026-05-22",
+  "category": "breakfast"
+}
+```
+
+> `date` must be in ISO 8601 format (`YYYY-MM-DD`).  
+> `category` must be one of: `breakfast`, `lunch`, `dinner`, `snack`, `supper`.
+
+### Response `200`
+
+```json
+{
+  "log_id": 7
+}
+```
+
+---
+
+## 3.2 Add Items to Log — `POST /users/{user_id}/logs/{log_id}/items`
+
+Add one or more food items to an existing meal log.
+
+### Request
+
+```json
+{
+  "item_ids": [1231, 3213]
+}
+```
+
+### Response `200`
+
+```json
+{
+  "status": "items added"
+}
+```
+
+### Error Responses
+
+- `404 Not Found`: Log or one of the items does not exist.
+
+---
+
+## 3.3 Get Log — `GET /users/{user_id}/logs/{log_id}`
+
+Retrieve the log metadata and all items in a meal log.
+
+### Response `200`
+
+```json
+{
+  "category": "breakfast",
+  "date": "2026-05-22",
+  "items": [
     {
-      "mealId": "m1",
-      "name": "Grilled Chicken Salad",
-      "category": "Lunch",
+      "name": "Johnny's Family Omelette",
       "calories": 450,
       "protein": 35,
       "carbs": 20,
-      "fat": 15,
-      "time": "2026-04-20T12:30:00Z"
-    },
-    {
-      "mealId": "m2",
-      "name": "Oatmeal with Berries",
-      "category": "Breakfast",
-      "calories": 300,
-      "protein": 10,
-      "carbs": 50,
-      "fat": 5,
-      "time": "2026-04-20T08:00:00Z"
+      "fat": 15
     }
   ]
 }
 ```
 
-## 4.2 Get Categories (GET)
+### Error Responses
 
-**Endpoint:** `/users/{userId}/categories`
+- `404 Not Found`: User or log does not exist.
 
-After viewing their meals, the user can retrieve the meal categories associated with those logged meals.
+---
 
-### Input
+## 3.4 Add Item to Log (via log router) — `POST /logs/{log_id}/items?item_id={item_id}`
 
-```
-GET /users/12345/categories
-```
+Alternative endpoint to add a single item to a log.
 
-### Output
+### Response `200`
 
 ```json
 {
-  "userId": "12345",
-  "categories": [
-    {
-      "name": "Breakfast",
-      "mealCount": 10
-    },
-    {
-      "name": "Lunch",
-      "mealCount": 8
-    },
-    {
-      "name": "Dinner",
-      "mealCount": 7
-    },
-    {
-      "name": "Snack",
-      "mealCount": 5
-    }
-  ]
+  "item_id": 1231,
+  "log_id": 7,
+  "status": "logged"
 }
 ```
 
-## 4.3 Get Meal Stats (GET)
+---
 
-**Endpoint:** `/users/{userId}/meal-stats`
+## 3.5 Remove Item from Log — `DELETE /logs/{log_id}/items/{item_id}`
 
-Finally, the user retrieves summary statistics about their meals, such as total meals logged, calories consumed, and their most frequent meal category.
+Remove a specific food item from a meal log.
 
-### Input
-
-```
-GET /users/12345/meal-stats
-```
-
-### Output
+### Response `200`
 
 ```json
 {
-  "userId": "12345",
-  "stats": {
-    "totalMeals": 30,
-    "averageCaloriesPerMeal": 420,
-    "totalCalories": 12600,
-    "macros": {
-      "protein": 900,
-      "carbs": 1500,
-      "fat": 400
-    },
-    "mostFrequentCategory": "Lunch"
+  "status": "deleted"
+}
+```
+
+### Error Responses
+
+- `404 Not Found`: Log does not exist, or item was not in this log.
+
+---
+
+# 4. Meal Plans
+
+Meal plans let users organize recurring eating schedules.
+
+## Flow Order
+
+1. Create Plan
+2. Get All Plans
+3. Delete Plan (if needed)
+
+## 4.1 Create Plan — `POST /plans/{user_id}/plan`
+
+### Request
+
+```json
+{
+  "name": "Cutting Plan",
+  "schedule_type": "daily"
+}
+```
+
+Weekly / custom example:
+
+```json
+{
+  "name": "Gym Days",
+  "schedule_type": "weekly",
+  "days": ["monday", "thursday", "friday"]
+}
+```
+
+> `schedule_type` must be one of: `daily`, `weekly`, `custom`.  
+> `days` is optional and only meaningful for `weekly` or `custom` schedules.
+
+### Response `200`
+
+```json
+{
+  "plan_id": 1,
+  "user_id": 20,
+  "name": "Cutting Plan",
+  "schedule": "daily"
+}
+```
+
+### Error Responses
+
+- `404 Not Found`: User does not exist.
+
+---
+
+## 4.2 Get All Plans — `GET /plans/{user_id}/plan`
+
+Returns **all** meal plans for the user (not just the first one).
+
+### Response `200`
+
+```json
+[
+  {
+    "plan_id": 1,
+    "user_id": 20,
+    "name": "Cutting Plan",
+    "schedule": "daily"
+  },
+  {
+    "plan_id": 2,
+    "user_id": 20,
+    "name": "Gym Days",
+    "schedule": "weekly:monday,thursday,friday"
   }
-}
+]
 ```
+
+### Error Responses
+
+- `404 Not Found`: User does not exist.
+
+---
+
+## 4.3 Delete Plan — `DELETE /plans/{user_id}/plan/{plan_id}`
+
+### Response `204 No Content`
+
+### Error Responses
+
+- `404 Not Found`: Plan not found for this user.
+
+---
+
+# 5. Admin
+
+## 5.1 Reset Database — `POST /admin/reset`
+
+Truncates all tables and resets serial sequences. **Destructive — use with caution.**
+
+### Response `204 No Content`

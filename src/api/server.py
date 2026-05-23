@@ -9,7 +9,7 @@ tags_metadata = [
     {"name": "admin", "description": "Reset the tracker state."},
     {"name": "users", "description": "Manage User Profiles and Items"},
     {"name": "logs", "description": "Manage Meal Logs and Logged Items"},
-    {"name": "plans", "description": "Manage Meal Plans and Logged Items"}
+    {"name": "plans", "description": "Manage Meal Plans and Logged Items"},
 ]
 
 app = FastAPI(

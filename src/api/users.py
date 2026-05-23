@@ -1,5 +1,8 @@
+from datetime import date
+from enum import Enum
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr, Field
 import sqlalchemy
 from src.api import auth
 from src import database as db
@@ -11,13 +14,16 @@ router = APIRouter(
 )
 
 
+#user models
+
+
 class User(BaseModel):
     username: str
     name: str
-    email: str
-    height: float
-    weight: float
-    age: float
+    email: EmailStr
+    height: float = Field(ge=0)
+    weight: float = Field(ge=0)
+    age: int = Field(ge=0)
 
 
 class UserCreateResponse(BaseModel):
@@ -30,48 +36,49 @@ def create_user(new_user: User):
     Creates a new user profile.
     """
     with db.engine.begin() as connection:
-        result = connection.execute(
+        existing = connection.execute(
             sqlalchemy.text(
                 """
                 SELECT id
                 FROM users
-                where email = :email
+                WHERE email = :email
+                """
+            ),
+            [{"email": new_user.email}]
+        ).one_or_none()
+
+        if existing:
+            #duplicate email, return 409 not 500
+            raise HTTPException(
+                status_code=409,
+                detail="User with this email already exists."
+            )
+
+        new = connection.execute(
+            sqlalchemy.text(
+                """
+                INSERT INTO users (username, name, email, height, weight, age)
+                VALUES (:username, :name, :email, :height, :weight, :age)
+                RETURNING id
                 """
             ),
             [{
-            "email": new_user.email
-            }]
-        ).one_or_none()
-
-
-    if result:
-        raise HTTPException(status_code=500, detail="User with this email already exists.")
-    else:
-        with db.engine.begin() as connection:
-            new = connection.execute(
-                sqlalchemy.text(
-                    """
-                    INSERT INTO users (username, name, email, height, weight, age)
-                    VALUES (:username, :name, :email, :height, :weight, :age)
-                    RETURNING id
-                    """
-                ),
-                [{
                 "username": new_user.username,
                 "name": new_user.name,
                 "email": new_user.email,
                 "height": new_user.height,
                 "weight": new_user.weight,
                 "age": new_user.age,
-                }]
-            ).one()
-        return UserCreateResponse(user_id=new.id)
+            }]
+        ).one()
+
+    return UserCreateResponse(user_id=new.id)
 
 
 class NewUserStats(BaseModel):
-    height: float = 0
-    weight: float = 0
-    age: float = 0
+    height: Optional[float] = Field(default=None, ge=0)
+    weight: Optional[float] = Field(default=None, ge=0)
+    age: Optional[int] = Field(default=None, ge=0)
 
 
 class UpdateUserResponse(BaseModel):
@@ -90,38 +97,26 @@ def get_user_stats(user_id: int):
                 WHERE id = :user_id
                 """
             ),
-            [{
-                "user_id": user_id
-            }]
+            [{"user_id": user_id}]
         ).one_or_none()
 
-        # Our current inference as to how non-existent users should be handled.
         if not result:
             raise HTTPException(status_code=404, detail="User does not exist.")
 
-        else:
-            user = User(
-                username=result.username,
-                name=result.name,
-                email=result.email,
-                height=result.height,
-                weight=result.weight,
-                age=result.age
-            )
-
-            return user
+        return User(
+            username=result.username,
+            name=result.name,
+            email=result.email,
+            height=result.height,
+            weight=result.weight,
+            age=result.age,
+        )
 
 
-# PATCH is used here to preserve the url and
-# avoid an extra url tag.
-# Based off of the PATCH principles at
-# https://learn.microsoft.com/en-us/azure/architecture/best-practices/api-design
-# Uses default value of 0 symbolizing no change in that item.
+#only updates fields that are not None
 @router.patch("/{user_id}", response_model=UpdateUserResponse)
 def update_user_stats(user_id: int, new_user_stats: NewUserStats):
-    """
-    Update a user profile with new height, weight, and/or age metrics.
-    """
+    """Update height, weight, and/or age. Omit any field to leave it unchanged."""
 
     with db.engine.begin() as connection:
         user_result = connection.execute(
@@ -132,93 +127,86 @@ def update_user_stats(user_id: int, new_user_stats: NewUserStats):
                 WHERE id = :user_id
                 """
             ),
-            [{
-                "user_id": user_id
-            }]
+            [{"user_id": user_id}]
         ).one_or_none()
 
-    # Our current inference as to how non-existent users should be handled.
-    if not user_result:
-        raise HTTPException(status_code=404, detail="User does not exist.")
+        if not user_result:
+            raise HTTPException(status_code=404, detail="User does not exist.")
 
-    # Our current inference as to how invalid input should be handled.
-    if new_user_stats.height < 0 or new_user_stats.weight < 0 or new_user_stats.age < 0:
-        raise HTTPException(status_code=400, detail="Values must be greater than 0.")
+        if new_user_stats.height is not None:
+            connection.execute(
+                sqlalchemy.text(
+                    """
+                    UPDATE users
+                    SET height = :height 
+                    WHERE id = :user_id
+                    """
+                ),
+                [{"height": new_user_stats.height, "user_id": user_id}]
+            )
 
-    else:
-        with db.engine.begin() as connection:
-            if new_user_stats.height != 0:
-                connection.execute(
-                    sqlalchemy.text(
-                        """
-                        UPDATE users
-                        SET height = :height 
-                        WHERE id = :user_id
-                        """
-                    ),
-                    [{
-                        "height": new_user_stats.height,
-                        "user_id": user_id
-                    }]
-                )
+        if new_user_stats.weight is not None:
+            connection.execute(
+                sqlalchemy.text(
+                    """
+                    UPDATE users
+                    SET weight = :weight
+                    WHERE id = :user_id
+                    """
+                ),
+                [{"weight": new_user_stats.weight, "user_id": user_id}]
+            )
 
-            if new_user_stats.weight != 0:
-                connection.execute(
-                    sqlalchemy.text(
-                        """
-                        UPDATE users
-                        SET weight = :weight
-                        WHERE id = :user_id
-                        """
-                    ),
-                    [{
-                        "weight": new_user_stats.weight,
-                        "user_id": user_id,
-                    }]
-                )
+        if new_user_stats.age is not None:
+            connection.execute(
+                sqlalchemy.text(
+                    """
+                    UPDATE users
+                    SET age = :age
+                    WHERE id = :user_id
+                    """
+                ),
+                [{"age": new_user_stats.age, "user_id": user_id}]
+            )
 
-            if new_user_stats.age != 0:
-                connection.execute(
-                    sqlalchemy.text(
-                        """
-                        UPDATE users
-                        SET age = :age
-                        WHERE id = :user_id
-                        """
-                    ),
-                    [{
-                        "age": new_user_stats.age,
-                        "user_id": user_id,
-                    }]
-                )
-
-        return UpdateUserResponse(user_id=user_id, status="updated")
+    return UpdateUserResponse(user_id=user_id, status="updated")
 
 
+#meal log models
+
+
+#allowed meal categories
+class MealCategory(str, Enum):
+    breakfast = "breakfast"
+    lunch = "lunch"
+    dinner = "dinner"
+    snack = "snack"
+    supper = "supper"
+
+
+#date in YYYY-MM-DD format, no time needed
 class LogInfo(BaseModel):
-    month: int
-    day: int
-    year: int
-    time: str
-    category: str
+    date: date
+    category: MealCategory
+
 
 class LogCreationResponse(BaseModel):
     log_id: int
 
+
 class LoggedItem(BaseModel):
     name: str
-    calories: float
-    protein: float
-    carbs: float
-    fat: float
+    calories: float = Field(ge=0)
+    protein: float = Field(ge=0)
+    carbs: float = Field(ge=0)
+    fat: float = Field(ge=0)
+
 
 class MealLogResponse(BaseModel):
     category: str
-    month: int
-    day: int
-    year: int
-    time: str
+    date: date
     items: list[LoggedItem]
+
 
 @router.post("/{user_id}/logs", response_model=LogCreationResponse)
 def create_meal_log(user_id: int, info: LogInfo):
@@ -242,25 +230,23 @@ def create_meal_log(user_id: int, info: LogInfo):
         result = connection.execute(
             sqlalchemy.text(
                 """
-                INSERT INTO user_logs (user_id, month, day, year, time, category)
-                VALUES (:user_id, :month, :day, :year, :time, :category)
-                returning id
+                INSERT INTO user_logs (user_id, date, category)
+                VALUES (:user_id, :date, :category)
+                RETURNING id
                 """
             ),
             [{
                 "user_id": user_id,
-                "month": info.month,
-                "day": info.day,
-                "year": info.year,
-                "time": info.time,
-                "category": info.category
+                "date": info.date,
+                "category": info.category.value,
             }]
         ).one()
 
     return LogCreationResponse(log_id=result.id)
 
+
 @router.get("/{user_id}/logs/{log_id}", response_model=MealLogResponse)
-def get_log(user_id:int, log_id:int):
+def get_log(user_id: int, log_id: int):
     with db.engine.begin() as connection:
         user_result = connection.execute(
             sqlalchemy.text(
@@ -270,9 +256,7 @@ def get_log(user_id:int, log_id:int):
                 WHERE id = :user_id
                 """
             ),
-            [{
-            "user_id": user_id,
-            }]
+            [{"user_id": user_id}]
         ).one_or_none()
 
         if not user_result:
@@ -281,61 +265,104 @@ def get_log(user_id:int, log_id:int):
         info_result = connection.execute(
             sqlalchemy.text(
                 """
-                SELECT category, month, day, year, time
+                SELECT category, date
                 FROM user_logs
                 WHERE user_id = :user_id
                 AND id = :log_id
                 """
             ),
-            [{
-                "user_id": user_id,
-                "log_id": log_id
-            }]
+            [{"user_id": user_id, "log_id": log_id}]
         ).one_or_none()
+
+        if not info_result:
+            raise HTTPException(status_code=404, detail="Log not found.")
 
         items_result = connection.execute(
             sqlalchemy.text(
                 """
                 SELECT name, calories, protein, carbs, fat
                 FROM log_items
-                JOIN user_items on user_items.id = log_items.item_id
+                JOIN user_items ON user_items.id = log_items.item_id
                 WHERE log_items.log_id = :log_id 
                 """
             ),
-            [{
-                "log_id": log_id
-            }]
+            [{"log_id": log_id}]
         ).all()
 
-        items_list = [LoggedItem(name=itm.name, calories=itm.calories, protein=itm.protein, carbs=itm.carbs, fat=itm.fat) for itm in items_result]
-        if not info_result:
-            raise HTTPException(status_code=404, detail="Log not found.")
+        items_list = [
+            LoggedItem(
+                name=itm.name,
+                calories=itm.calories,
+                protein=itm.protein,
+                carbs=itm.carbs,
+                fat=itm.fat,
+            )
+            for itm in items_result
+        ]
 
-        return MealLogResponse(category=info_result.category,
-                               month=info_result.month,
-                               day=info_result.day,
-                               year=info_result.year,
-                               time=str(info_result.time),
-                               items=items_list)
+        return MealLogResponse(
+            category=info_result.category,
+            date=info_result.date,
+            items=items_list,
+        )
 
 class NewLogItems(BaseModel):
     item_ids: list[int]
 
-class LogItemsResponse(BaseModel):
-    status: str
+
+@router.post("/{user_id}/logs/{log_id}/items")
+def add_items_to_log(user_id: int, log_id: int, body: AddItemsToLog):
+    """Add one or more food items to an existing meal log."""
+    with db.engine.begin() as connection:
+        log_exists = connection.execute(
+            sqlalchemy.text(
+                "SELECT 1 FROM user_logs WHERE id = :log_id AND user_id = :user_id"
+            ),
+            {"log_id": log_id, "user_id": user_id}
+        ).one_or_none()
+
+        if not log_exists:
+            raise HTTPException(status_code=404, detail="Log not found.")
+
+        for item_id in body.item_ids:
+            item_exists = connection.execute(
+                sqlalchemy.text(
+                    "SELECT 1 FROM user_items WHERE id = :item_id AND user_id = :user_id"
+                ),
+                {"item_id": item_id, "user_id": user_id}
+            ).one_or_none()
+
+            if not item_exists:
+                raise HTTPException(
+                    status_code=404, detail=f"Item {item_id} not found."
+                )
+
+            connection.execute(
+                sqlalchemy.text(
+                    "INSERT INTO log_items (log_id, item_id) VALUES (:log_id, :item_id)"
+                ),
+                {"log_id": log_id, "item_id": item_id}
+            )
+
+    return {"status": "items added"}
+
+#food item models
+
 
 class FoodItem(BaseModel):
     name: str
-    calories: float
-    protein: float
-    carbs: float
-    fat: float
+    #all values >= 0
+    calories: float = Field(ge=0)
+    protein: float = Field(ge=0)
+    carbs: float = Field(ge=0)
+    fat: float = Field(ge=0)
 
 
 class ItemCreateResponse(BaseModel):
     item_id: int
     user_id: int
     status: str
+
 
 @router.post("/{user_id}/items", response_model=ItemCreateResponse)
 def add_food_item(user_id: int, new_item: FoodItem):
@@ -348,34 +375,28 @@ def add_food_item(user_id: int, new_item: FoodItem):
                 WHERE id = :user_id
                 """
             ),
-            [{
-                "user_id": user_id,
-            }]
+            [{"user_id": user_id}]
         ).one_or_none()
 
-    # Our current inference as to how non-existent users should be handled.
-    if not user_result:
-        raise HTTPException(status_code=404, detail="User does not exist.")
-    else:
-        with db.engine.begin() as connection:
-            item_result = connection.execute(
-                sqlalchemy.text(
-                    """
-                    INSERT INTO user_items (user_id, name, calories, protein, carbs, fat)
-                    VALUES (:user_id, :name, :calories, :protein, :carbs, :fat) 
-                    RETURNING id
-                    """
-                ),
-                [{
-                    "user_id": user_id,
-                    "name": new_item.name,
-                    "calories": new_item.calories,
-                    "protein": new_item.protein,
-                    "carbs": new_item.carbs,
-                    "fat": new_item.fat
-                }]
-            ).one()
+        if not user_result:
+            raise HTTPException(status_code=404, detail="User does not exist.")
+
+        item_result = connection.execute(
+            sqlalchemy.text(
+                """
+                INSERT INTO user_items (user_id, name, calories, protein, carbs, fat)
+                VALUES (:user_id, :name, :calories, :protein, :carbs, :fat) 
+                RETURNING id
+                """
+            ),
+            [{
+                "user_id": user_id,
+                "name": new_item.name,
+                "calories": new_item.calories,
+                "protein": new_item.protein,
+                "carbs": new_item.carbs,
+                "fat": new_item.fat,
+            }]
+        ).one()
 
     return ItemCreateResponse(user_id=user_id, item_id=item_result.id, status="created")
-
-
