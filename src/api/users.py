@@ -309,14 +309,23 @@ def get_log(user_id: int, log_id: int):
 class NewLogItems(BaseModel):
     item_ids: list[int]
 
+class LogUpdateResponse(BaseModel):
+    status: str
 
-@router.post("/{user_id}/logs/{log_id}/items")
+class AddItemsToLog(BaseModel):
+    item_ids: list[int]
+
+@router.post("/{user_id}/logs/{log_id}/items", response_model=LogUpdateResponse)
 def add_items_to_log(user_id: int, log_id: int, body: AddItemsToLog):
     """Add one or more food items to an existing meal log."""
     with db.engine.begin() as connection:
         log_exists = connection.execute(
             sqlalchemy.text(
-                "SELECT 1 FROM user_logs WHERE id = :log_id AND user_id = :user_id"
+                """
+                SELECT 1 
+                FROM user_logs 
+                WHERE id = :log_id AND user_id = :user_id
+                """
             ),
             {"log_id": log_id, "user_id": user_id}
         ).one_or_none()
@@ -324,22 +333,35 @@ def add_items_to_log(user_id: int, log_id: int, body: AddItemsToLog):
         if not log_exists:
             raise HTTPException(status_code=404, detail="Log not found.")
 
-        for item_id in body.item_ids:
-            item_exists = connection.execute(
-                sqlalchemy.text(
-                    "SELECT 1 FROM user_items WHERE id = :item_id AND user_id = :user_id"
-                ),
-                {"item_id": item_id, "user_id": user_id}
-            ).one_or_none()
+        existing_items = connection.execute(
+            sqlalchemy.text(
+                """
+                SELECT id
+                FROM user_items
+                WHERE id = ANY(:item_ids) AND user_id = :user_id
+                """
+            ),
+            [{
+                "user_id": user_id,
+                "item_ids": body.item_ids,
+            }]
+        ).fetchall()
 
-            if not item_exists:
+        existing_item_ids = {row.id for row in existing_items}
+
+        for item_id in body.item_ids:
+            if item_id not in existing_item_ids:
                 raise HTTPException(
-                    status_code=404, detail=f"Item {item_id} not found."
+                    status_code=404,
+                    detail=f"Item {item_id} not found."
                 )
 
             connection.execute(
                 sqlalchemy.text(
-                    "INSERT INTO log_items (log_id, item_id) VALUES (:log_id, :item_id)"
+                    """
+                    INSERT INTO log_items (log_id, item_id) 
+                    VALUES (:log_id, :item_id)
+                    """
                 ),
                 {"log_id": log_id, "item_id": item_id}
             )
