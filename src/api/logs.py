@@ -30,7 +30,7 @@ class ItemDeleteResponse(BaseModel):
 
 
 @router.post("/{log_id}/items", response_model=LogStatusResponse)
-def add_to_log(log_id: int, items: "NewLogItems"):
+def add_to_log(user_id: int, log_id: int, items: "NewLogItems"):
     """Add one or more food items to an existing meal log."""
     with db.engine.begin() as connection:
         log_result = connection.execute(
@@ -47,24 +47,29 @@ def add_to_log(log_id: int, items: "NewLogItems"):
         if not log_result:
             raise HTTPException(status_code=404, detail="Log does not exist.")
 
-        logged_itms = []
+        existing_items = connection.execute(
+            sqlalchemy.text(
+                """
+                SELECT id
+                FROM user_items
+                WHERE id = ANY(:item_ids) AND user_id = :user_id
+                """
+            ),
+            [{
+                "user_id": user_id,
+                "item_ids": items.item_ids,
+            }]
+        ).fetchall()
+
+        existing_item_ids = {row.id for row in existing_items}
 
         for item_id in items.item_ids:
-            item_exists = connection.execute(
-                sqlalchemy.text(
-                    """
-                    SELECT 1 
-                    FROM user_items 
-                    WHERE id = :item_id
-                    """
-                ),
-                [{"item_id": item_id}]
-            ).one_or_none()
+            if item_id not in existing_item_ids:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Item {item_id} not found."
+                )
 
-            if not item_exists:
-                raise HTTPException(status_code=404, detail=f"Item {item_id} not found.")
-
-        for item_id in items.item_ids:
             connection.execute(
                 sqlalchemy.text(
                     """
@@ -72,11 +77,13 @@ def add_to_log(log_id: int, items: "NewLogItems"):
                     VALUES (:log_id, :item_id)
                     """
                 ),
-                [{"log_id": log_id, "item_id": item_id}]
+                [{
+                    "log_id": log_id,
+                    "item_id": item_id
+                }]
             )
-            logged_itms.append(item_id)
 
-    return LogStatusResponse(item_ids=logged_itms, status="logged")
+    return LogStatusResponse(item_ids=items.item_ids, status="logged")
 
 
 class NewLogItems(BaseModel):

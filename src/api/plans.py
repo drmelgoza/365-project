@@ -231,6 +231,8 @@ def get_meal_plan(user_id: int):
             raise HTTPException(status_code=404, detail="User has no plans.")
 
         response = []
+
+        # TODO: Change this part to have all columns queried first and then the loop can loop through them after
         for plan in plans:
             items_result = conn.execute(
                 sqlalchemy.text(

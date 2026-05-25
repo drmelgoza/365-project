@@ -13,7 +13,7 @@ the correct output should be returning now.
 
 Curl command:
 
-```
+```bash
  curl -X 'POST' \
    'https://datafit-meal-tracker.onrender.com/users/' \
    -H 'accept: application/json' \
@@ -29,19 +29,66 @@ Curl command:
  }'
 ```
 This should be the correct command (a typo was fixed).
-Just make sure to replace the `***` where it says
-`'access_token: ***'` with the actual api key.
+> **IMPORTANT NOTE**: Make sure to replace the `***` where it says
+> `'access_token: ***'` with the actual api key.
 
 If the user doesn't exist yet:
-```
+```json
 {"user_id":2}
 ```
 
 If user does exist:
-```
+```json
 {"detail":"User with this email already exists."}
 ```
 
----
+## New Test Case #1 (Victor Wu)
+Curl command:
 
+```bash
+curl -X POST \
+ "https://datafit-meal-tracker.onrender.com/users/" \
+ -H "accept: application/json" \
+ -H "access_token: ***" \
+ -H "Content-Type: application/json" \
+ -d '{
+ "username": "viciswoozy",
+ "name": "Victor",
+ "email": "victor@somemail.com",
+ "height": 70,
+ "weight": 185,
+ "age": 20
+}'
+```
+
+Result for creation:
+
+```json
+{"user_id":11}
+```
+
+Curl command for updating users stats:
+
+```bash
+curl -X PATCH \
+  "https://datafit-meal-tracker.onrender.com/users/11" \
+  -H "accept: application/json" \
+  -H "access_token: ***" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "height": 100
+  }'
+```
+
+Results for updating:
+
+```json
+{"user_id":11,"status":"updated"}
+```
+***Feedback:***
+New test case seems to be working correctly.
+
+## New Test Case #2
+
+---
 

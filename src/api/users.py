@@ -133,6 +133,9 @@ def update_user_stats(user_id: int, new_user_stats: NewUserStats):
         if not user_result:
             raise HTTPException(status_code=404, detail="User does not exist.")
 
+        if new_user_stats.height < 0 or new_user_stats.weight < 0 or new_user_stats.age < 0:
+            raise HTTPException(status_code=400, detail="Values must be greater than 0.")
+
         if new_user_stats.height is not None:
             connection.execute(
                 sqlalchemy.text(
