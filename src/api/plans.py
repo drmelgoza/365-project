@@ -82,6 +82,11 @@ class UserPlansRemovePlanResponse(BaseModel):
     plan_id: int
     status: str
 
+class SameplanResponse(BaseModel):
+    user_name: str
+    user_emal: str
+    
+
 
 #endpoints
 
@@ -490,3 +495,69 @@ def remove_plan(user_id: int, plan_id: int):
         )
 
     return UserPlansRemovePlanResponse(plan_id=plan_id, status="removed")
+
+
+###DAVID WORK
+###ADDED an API that matches a person with other people who share the same meal_plan 
+
+@router.get("/{user_id}/plan", response_model=list[SameplanResponse])
+def compare_meal_plan(user_id: int):
+    """Return all plans for the user instead of just the first one."""
+    with db.engine.connect() as conn:
+        user_result = conn.execute(
+            sqlalchemy.text(
+                """
+                SELECT 1
+                FROM users
+                WHERE id = :user_id
+                """
+            ),
+            [{"user_id": user_id}]
+        ).one_or_none()
+
+        if not user_result:
+            raise HTTPException(status_code=404, detail="User does not exist.")
+
+    
+
+        person = conn.execute(
+            sqlalchemy.text(
+                """
+                SELECT id, name, schedule
+                FROM user_plans
+                WHERE user_id = :user_id
+                ORDER BY id
+                """
+            ),
+            [{"user_id": user_id}]
+        ).one_or_none()
+
+        if not user_result:
+            raise HTTPException(status_code=404, detail="User does not exist in eser_plans.")
+
+
+        same = conn.execute(
+            sqlalchemy.text(
+                """
+                SELECT user.name, user.email
+                FROM user_plans
+                JOIN users
+                ON user.id = user_plans.user_id
+                WHERE user_plans.schedule = :schedule
+                ORDER BY id
+                """
+            ),
+            [{"schedule": person.schedule}]
+        ).all()
+
+        print(f"Perosn with id {user_id} has the same plan as the following people")
+        list_of_people = []
+        for p in same:
+            list_of_people.append(SameplanResponse(
+                user_name = p.name,
+                user_email = p.email
+            )
+            )
+        
+
+    return list_of_people
