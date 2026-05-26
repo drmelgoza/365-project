@@ -1,6 +1,6 @@
 # New Test Cases
 
-## Test Case #1
+## Test Case #1: User Stats Update
 This test is testing that the PATCH endpoint is working correctly to update user stats.
 
 Curl command:
@@ -46,7 +46,7 @@ Results for updating:
 {"user_id":11,"status":"updated"}
 ```
 
-## Test Case #2
+## Test Case #2: Basic Flow Test
 * Attempt to add an item to the meal plan
 * Get the meal plan
 * Get meal plans by category and by day and ensure their correctness
@@ -157,4 +157,96 @@ Result:
 {"category":"Lunch","schedule":"weekly","items":[{"name":"Hamburger","calories":910.0,"protein":20.0,"carbs":30.0,"fat":20.0}]}
 ```
 
-## Test Case #3
+***Observation:*** Basic flow seems to be working. Test cases return expected results.
+
+## Test Case #3: Invalid Date Formatting
+
+Tests validation of negative input values.
+
+```bash
+curl -i -X POST "http://127.0.0.1:3000/users/2/items" \
+  -H "accept: application/json" \
+  -H "access_token: ***" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Negative Food","calories":-100,"protein":-5,"carbs":-10,"fat":-2}'
+```
+
+Result:
+```json
+{"detail":[{"type":"greater_than_equal","loc":["body","calories"],"msg":"Input should be greater than or equal to 0","input":-100,"ctx":{"ge":0.0}},{"type":"greater_than_equal","loc":["body","protein"],"msg":"Input should be greater than or equal to 0","input":-5,"ctx":{"ge":0.0}},{"type":"greater_than_equal","loc":["body","carbs"],"msg":"Input should be greater than or equal to 0","input":-10,"ctx":{"ge":0.0}},{"type":"greater_than_equal","loc":["body","fat"],"msg":"Input should be greater than or equal to 0","input":-2,"ctx":{"ge":0.0}}]}
+```
+***Observation:*** Code has been corrected to check for negative values and the result is the correct
+expected result.
+
+## Test Case #4: Invalid Dates
+
+Tests invalid date formatting.
+
+>**NOTE:** Original test case body was replaced with new request
+> body that matches new date format.
+
+```bash
+curl -i -X POST "http://127.0.0.1:3000/users/2/logs" \
+  -H "accept: application/json" \
+  -H "access_token: ***" \
+  -H "Content-Type: application/json" \
+  -d '{
+	  "date": "2026-26-05",
+	  "category": "breakfast"
+	}'
+```
+
+Result:
+
+```json
+{"detail":[{"type":"date_from_datetime_parsing","loc":["body","date"],"msg":"Input should be a valid date or datetime, month value is outside expected range of 1-12","input":"2026-26-05","ctx":{"error":"month value is outside expected range of 1-12"}}]}
+```
+
+***Observation:*** Invalid date format returns error as expected. Test case works.
+
+## Test Case #5: Duplicate Items
+
+This test case tests duplicate items.
+
+> [!IMPORTANT]
+> This test case is expected to change.
+
+>**NOTE:** Schema might be reworked to handle this
+
+```bash
+curl -i -X POST "http://127.0.0.1:3000/logs/2/items?user_id=1" \
+  -H "accept: application/json" \
+  -H "access_token: ***" \
+  -H "Content-Type: application/json" \
+  -d '{"item_ids":[4,4]}'
+```
+
+Result:
+
+```json
+{"item_ids":[4,4],"status":"logged"}
+```
+***Observation:*** Currently returns as successful, as expected.
+Result may be expected to change with new implementation for
+the logs endpoint.
+
+## Test Case #6: Deletion of non-existent item
+
+This test checks to see if an error returns for
+attempting to delete a non-existent item for a specific user.
+
+```bash
+curl -X 'DELETE' \
+  'http://127.0.0.1:3000/plans/1/plan/items/8' \
+  -H 'accept: application/json' \
+  -H 'access_token: ***'
+```
+
+Result:
+
+```json
+{"detail":"Item does not exist in this user's plan."}
+```
+
+***Observation:*** Test returns as expected. An 404 error
+returns signaling that the item doesn't exist.
