@@ -1,7 +1,7 @@
 # Peer Review Feedback
 
 > [!IMPORTANT] 
-> All new test cases in the [v3_manual_test_results.md](test/v3_manual_test_results.md) file
+> All new test cases in the [v3_manual_test_results.md](365-project/test/v3_manual_test_results.md) file
 
 ## Flow 1 Testing (Victor Wu)
 
