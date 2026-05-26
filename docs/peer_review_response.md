@@ -32,7 +32,8 @@ Curl command:
  }'
 ```
 This should be the correct command (a typo was fixed).
-> **IMPORTANT NOTE**: Make sure to replace the `***` where it says
+> [!IMPORTANT]
+> Make sure to replace the `***` where it says
 > `'access_token: ***'` with the actual api key.
 
 If the user doesn't exist yet:
