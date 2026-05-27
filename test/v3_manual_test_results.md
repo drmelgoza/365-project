@@ -1,6 +1,11 @@
 # New Test Cases
 
-## Test Case #1: User Stats Update
+> [!IMPORTANT]
+> Anywhere that has `'access_token: ***'`, the `***` should be replaced with an actual api key.
+
+<details>
+<summary>Test Case #1: User Stats Update</summary>
+
 This test is testing that the PATCH endpoint is working correctly to update user stats.
 
 Curl command:
@@ -46,7 +51,11 @@ Results for updating:
 {"user_id":11,"status":"updated"}
 ```
 
-## Test Case #2: Basic Flow Test
+</details>
+
+<details>
+<summary>Test Case #2: Basic Flow Test</summary>
+
 * Attempt to add an item to the meal plan
 * Get the meal plan
 * Get meal plans by category and by day and ensure their correctness
@@ -116,9 +125,9 @@ Result:
 {"plan_id":6,"item_id":9,"user_id":10,"status":"items added"}
 ```
 
-**User gets plans altogether and then by both day and category:**
+***User gets plans altogether and then by both day and category:***
 
-Get meal plan normally:
+**Get meal plan normally:**
 ```bash
 curl -X GET \
   "https://datafit-meal-tracker.onrender.com/plans/10/plan" \
@@ -159,7 +168,10 @@ Result:
 
 ***Observation:*** Basic flow seems to be working. Test cases return expected results.
 
-## Test Case #3: Invalid Date Formatting
+</details>
+
+<details>
+<summary>Test Case #3: Invalid Date Formatting</summary>
 
 Tests validation of negative input values.
 
@@ -178,7 +190,11 @@ Result:
 ***Observation:*** Code has been corrected to check for negative values and the result is the correct
 expected result.
 
-## Test Case #4: Invalid Dates
+</details>
+
+
+<details>
+<summary>Test Case #4: Invalid Dates</summary>
 
 Tests invalid date formatting.
 
@@ -204,33 +220,10 @@ Result:
 
 ***Observation:*** Invalid date format returns error as expected. Test case works.
 
-## Test Case #5: Duplicate Items
+</details>
 
-This test case tests duplicate items.
-
-> [!IMPORTANT]
-> This test case is expected to change.
-
->**NOTE:** Schema might be reworked to handle this
-
-```bash
-curl -i -X POST "http://127.0.0.1:3000/logs/2/items?user_id=1" \
-  -H "accept: application/json" \
-  -H "access_token: ***" \
-  -H "Content-Type: application/json" \
-  -d '{"item_ids":[4,4]}'
-```
-
-Result:
-
-```json
-{"item_ids":[4,4],"status":"logged"}
-```
-***Observation:*** Currently returns as successful, as expected.
-Result may be expected to change with new implementation for
-the logs endpoint.
-
-## Test Case #6: Deletion of non-existent item
+<details>
+<summary>Test Case #5: Deletion of non-existent item</summary>
 
 This test checks to see if an error returns for
 attempting to delete a non-existent item for a specific user.
@@ -250,3 +243,5 @@ Result:
 
 ***Observation:*** Test returns as expected. An 404 error
 returns signaling that the item doesn't exist.
+
+</details>
