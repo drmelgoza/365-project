@@ -348,9 +348,15 @@ Returns **all** meal plans for the user (not just the first one).
 
 ---
 
-# 5. Admin
+# 5. Statistics
 
-## 5.1 Reset Database — `POST /admin/reset`
+Return nutrient summaries and goal progress for a specific day's meal logs.
+
+## Flow Order (Assuming Meal Logs and Goals exist)
+
+# 6. Admin
+
+## 6.1 Reset Database — `POST /admin/reset`
 
 Truncates all tables and resets serial sequences. **Destructive — use with caution.**
 

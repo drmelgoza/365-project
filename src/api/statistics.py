@@ -63,6 +63,11 @@ def get_daily_summary(user_id: int, summary_date: date):
         if not macro_totals:
             raise HTTPException(status_code=404, detail="No results for this date.")
 
+        calories = macro_totals.total_calories if macro_totals.total_calories else 0
+        protein = macro_totals.total_protein if macro_totals.total_protein else 0
+        carbs = macro_totals.total_carbs if macro_totals.total_carbs else 0
+        fats = macro_totals.total_fat if macro_totals.total_fat else 0
+
         macro_goals = connection.execute(
             sqlalchemy.text(
                 """
@@ -88,23 +93,23 @@ def get_daily_summary(user_id: int, summary_date: date):
             else:
                 calories_goal = row.quantity
 
-        protein_progress = macro_totals.total_protein / protein_goal * 100
-        carbs_progress = macro_totals.total_carbs / carbs_goal * 100
-        fats_progress = macro_totals.total_fat / fats_goal * 100
-        calories_progress = macro_totals.total_calories / calories_goal * 100
+        protein_progress = protein / protein_goal * 100
+        carbs_progress = carbs / carbs_goal * 100
+        fats_progress = fats / fats_goal * 100
+        calories_progress = calories / calories_goal * 100
         progress_bars = [protein_progress, carbs_progress, fats_progress, calories_progress]
         goals_met = sum([1 if progress > 100 else 0 for progress in progress_bars])
 
         return MacroTotalResponse(
             date=summary_date,
-            calories=macro_totals.total_calories,
-            calorie_progress=f"{round(calories_progress, 2)} %" if calories_progress > 0 else "No Goal",
-            protein=macro_totals.total_protein,
-            protein_progress=f"{round(protein_progress, 2)} %" if protein_progress > 0 else "No Goal",
-            carbs=macro_totals.total_carbs,
-            carbs_progress=f"{round(carbs_progress, 2)} %" if carbs_progress > 0 else "No Goal",
-            fats=macro_totals.total_fat,
-            fats_progress=f"{round(fats_progress, 2)} %" if fats_progress > 0 else "No Goal",
+            calories=calories,
+            calorie_progress=f"{round(calories_progress, 2)} %" if calories_progress >= 0 else "No Goal",
+            protein=protein,
+            protein_progress=f"{round(protein_progress, 2)} %" if protein_progress >= 0 else "No Goal",
+            carbs=carbs,
+            carbs_progress=f"{round(carbs_progress, 2)} %" if carbs_progress >= 0 else "No Goal",
+            fats=fats,
+            fats_progress=f"{round(fats_progress, 2)} %" if fats_progress >= 0 else "No Goal",
             total_goals_met = goals_met
         )
 
