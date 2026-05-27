@@ -4,6 +4,8 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, EmailStr, Field
 import sqlalchemy
+from sqlalchemy import Boolean
+
 from src.api import auth
 from src import database as db
 
@@ -14,9 +16,7 @@ router = APIRouter(
 )
 
 
-#user models
-
-
+#create_user models
 class User(BaseModel):
     username: str
     name: str
@@ -28,6 +28,33 @@ class User(BaseModel):
 
 class UserCreateResponse(BaseModel):
     user_id: int
+
+
+class NewUserStats(BaseModel):
+    height: Optional[float] = Field(default=None, ge=0)
+    weight: Optional[float] = Field(default=None, ge=0)
+    age: Optional[int] = Field(default=None, ge=0)
+
+
+class UpdateUserResponse(BaseModel):
+    user_id: int
+    status: str
+
+
+def valid_user(user_id: int) -> bool:
+    with db.engine.begin() as connection:
+        user_result = connection.execute(
+            sqlalchemy.text(
+                """
+                SELECT 1
+                FROM users
+                WHERE id = :user_id
+                """
+            ),
+            [{"user_id": user_id}]
+        ).one_or_none()
+
+        return True if user_result else False
 
 
 @router.post("/", response_model=UserCreateResponse)
@@ -75,19 +102,8 @@ def create_user(new_user: User):
     return UserCreateResponse(user_id=new.id)
 
 
-class NewUserStats(BaseModel):
-    height: Optional[float] = Field(default=None, ge=0)
-    weight: Optional[float] = Field(default=None, ge=0)
-    age: Optional[int] = Field(default=None, ge=0)
-
-
-class UpdateUserResponse(BaseModel):
-    user_id: int
-    status: str
-
-
 @router.get("/{user_id}", response_model=User)
-def get_user_stats(user_id: int):
+def get_user(user_id: int):
     with db.engine.begin() as connection:
         result = connection.execute(
             sqlalchemy.text(
@@ -114,9 +130,20 @@ def get_user_stats(user_id: int):
 
 
 #only updates fields that are not None
+#optimal version if time permits: use pythonic sql to build one query to execute?
 @router.patch("/{user_id}", response_model=UpdateUserResponse)
-def update_user_stats(user_id: int, new_user_stats: NewUserStats):
+def update_user(
+        user_id: int,
+        new_weight_lbs: float = None,
+        new_age: int = None,
+        new_height_cm: float = None
+):
     """Update height, weight, and/or age. Omit any field to leave it unchanged."""
+
+    # ensure values are either None or positive numbers
+    check_weight = new_weight_lbs is None or new_weight_lbs > 0
+    check_age = new_age is None or new_age > 0
+    check_height = new_height_cm is None or new_height_cm > 0
 
     with db.engine.begin() as connection:
         user_result = connection.execute(
@@ -133,10 +160,10 @@ def update_user_stats(user_id: int, new_user_stats: NewUserStats):
         if not user_result:
             raise HTTPException(status_code=404, detail="User does not exist.")
 
-        if new_user_stats.height < 0 or new_user_stats.weight < 0 or new_user_stats.age < 0:
+        if not (check_height and check_age and check_weight):
             raise HTTPException(status_code=400, detail="Values must be greater than 0.")
 
-        if new_user_stats.height is not None:
+        if new_height_cm and new_height_cm > 0:
             connection.execute(
                 sqlalchemy.text(
                     """
@@ -145,10 +172,10 @@ def update_user_stats(user_id: int, new_user_stats: NewUserStats):
                     WHERE id = :user_id
                     """
                 ),
-                [{"height": new_user_stats.height, "user_id": user_id}]
+                [{"height": new_height_cm, "user_id": user_id}]
             )
 
-        if new_user_stats.weight is not None:
+        if new_weight_lbs and new_weight_lbs > 0:
             connection.execute(
                 sqlalchemy.text(
                     """
@@ -157,10 +184,10 @@ def update_user_stats(user_id: int, new_user_stats: NewUserStats):
                     WHERE id = :user_id
                     """
                 ),
-                [{"weight": new_user_stats.weight, "user_id": user_id}]
+                [{"weight": new_weight_lbs, "user_id": user_id}]
             )
 
-        if new_user_stats.age is not None:
+        if new_age and new_age > 0:
             connection.execute(
                 sqlalchemy.text(
                     """
@@ -169,7 +196,7 @@ def update_user_stats(user_id: int, new_user_stats: NewUserStats):
                     WHERE id = :user_id
                     """
                 ),
-                [{"age": new_user_stats.age, "user_id": user_id}]
+                [{"age": new_age, "user_id": user_id}]
             )
 
     return UpdateUserResponse(user_id=user_id, status="updated")
@@ -184,8 +211,6 @@ class NutrientCategory(str, Enum):
 class GoalCreateResponse(BaseModel):
     user_id: int
     status: str
-
-
 
 
 @router.post("/{user_id}/goals", response_model=GoalCreateResponse)
@@ -230,8 +255,6 @@ def add_macro_goal(user_id: int, nutrient:NutrientCategory, quantity: int = 1):
         return GoalCreateResponse(user_id=user_id, status=status)
 
 #meal log models
-
-
 #allowed meal categories
 class MealCategory(str, Enum):
     breakfast = "breakfast"
