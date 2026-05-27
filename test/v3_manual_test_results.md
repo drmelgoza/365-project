@@ -1,6 +1,6 @@
 # New Test Cases
 
-> [!WARNING]
+> [!NOTE]
 > Document may need revision
 
 > [!IMPORTANT]
