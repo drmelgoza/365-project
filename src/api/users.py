@@ -278,203 +278,7 @@ def get_macro_goals(user_id: int):
         return MacroGoalResponse(user_id=user_id, goals=goals)
 
 
-#meal log models
-#allowed meal categories
-class MealCategory(str, Enum):
-    breakfast = "breakfast"
-    lunch = "lunch"
-    dinner = "dinner"
-    snack = "snack"
-    supper = "supper"
-
-
-#date in YYYY-MM-DD format, no time needed
-class LogInfo(BaseModel):
-    date: date
-    category: MealCategory
-
-
-class LogCreationResponse(BaseModel):
-    log_id: int
-
-
-class LoggedItem(BaseModel):
-    name: str
-    calories: float = Field(ge=0)
-    protein: float = Field(ge=0)
-    carbs: float = Field(ge=0)
-    fat: float = Field(ge=0)
-
-
-class MealLogResponse(BaseModel):
-    category: str
-    date: date
-    items: list[LoggedItem]
-
-
-@router.post("/{user_id}/logs", response_model=LogCreationResponse)
-def create_meal_log(user_id: int, info: LogInfo):
-    with db.engine.begin() as connection:
-        user_result = connection.execute(
-            sqlalchemy.text(
-                """
-                SELECT 1
-                FROM users
-                WHERE id = :user_id
-                """
-            ),
-            [{
-                "user_id": user_id,
-            }]
-        ).one_or_none()
-
-        if not user_result:
-            raise HTTPException(status_code=404, detail="User does not exist.")
-
-        result = connection.execute(
-            sqlalchemy.text(
-                """
-                INSERT INTO user_logs (user_id, date, category)
-                VALUES (:user_id, :date, :category)
-                RETURNING id
-                """
-            ),
-            [{
-                "user_id": user_id,
-                "date": info.date,
-                "category": info.category.value,
-            }]
-        ).one()
-
-    return LogCreationResponse(log_id=result.id)
-
-
-@router.get("/{user_id}/logs/{log_id}", response_model=MealLogResponse)
-def get_log(user_id: int, log_id: int):
-    with db.engine.begin() as connection:
-        user_result = connection.execute(
-            sqlalchemy.text(
-                """
-                SELECT 1 
-                FROM users
-                WHERE id = :user_id
-                """
-            ),
-            [{"user_id": user_id}]
-        ).one_or_none()
-
-        if not user_result:
-            raise HTTPException(status_code=404, detail="User does not exist.")
-
-        info_result = connection.execute(
-            sqlalchemy.text(
-                """
-                SELECT category, date
-                FROM user_logs
-                WHERE user_id = :user_id
-                AND id = :log_id
-                """
-            ),
-            [{"user_id": user_id, "log_id": log_id}]
-        ).one_or_none()
-
-        if not info_result:
-            raise HTTPException(status_code=404, detail="Log not found.")
-
-        items_result = connection.execute(
-            sqlalchemy.text(
-                """
-                SELECT name, calories, protein, carbs, fat
-                FROM log_items
-                JOIN user_items ON user_items.id = log_items.item_id
-                WHERE log_items.log_id = :log_id 
-                """
-            ),
-            [{"log_id": log_id}]
-        ).all()
-
-        items_list = [
-            LoggedItem(
-                name=itm.name,
-                calories=itm.calories,
-                protein=itm.protein,
-                carbs=itm.carbs,
-                fat=itm.fat,
-            )
-            for itm in items_result
-        ]
-
-        return MealLogResponse(
-            category=info_result.category,
-            date=info_result.date,
-            items=items_list,
-        )
-
-class NewLogItems(BaseModel):
-    item_ids: list[int]
-
-class LogUpdateResponse(BaseModel):
-    status: str
-
-class AddItemsToLog(BaseModel):
-    item_ids: list[int]
-
-@router.post("/{user_id}/logs/{log_id}/items", response_model=LogUpdateResponse)
-def add_items_to_log(user_id: int, log_id: int, body: AddItemsToLog):
-    """Add one or more food items to an existing meal log."""
-    with db.engine.begin() as connection:
-        log_exists = connection.execute(
-            sqlalchemy.text(
-                """
-                SELECT 1 
-                FROM user_logs 
-                WHERE id = :log_id AND user_id = :user_id
-                """
-            ),
-            {"log_id": log_id, "user_id": user_id}
-        ).one_or_none()
-
-        if not log_exists:
-            raise HTTPException(status_code=404, detail="Log not found.")
-
-        existing_items = connection.execute(
-            sqlalchemy.text(
-                """
-                SELECT id
-                FROM user_items
-                WHERE id = ANY(:item_ids) AND user_id = :user_id
-                """
-            ),
-            [{
-                "user_id": user_id,
-                "item_ids": body.item_ids,
-            }]
-        ).fetchall()
-
-        existing_item_ids = {row.id for row in existing_items}
-
-        for item_id in body.item_ids:
-            if item_id not in existing_item_ids:
-                raise HTTPException(
-                    status_code=404,
-                    detail=f"Item {item_id} not found."
-                )
-
-            connection.execute(
-                sqlalchemy.text(
-                    """
-                    INSERT INTO log_items (log_id, item_id) 
-                    VALUES (:log_id, :item_id)
-                    """
-                ),
-                {"log_id": log_id, "item_id": item_id}
-            )
-
-    return {"status": "items added"}
-
 #food item models
-
-
 class FoodItem(BaseModel):
     name: str
     #all values >= 0
@@ -492,47 +296,13 @@ class ItemCreateResponse(BaseModel):
 
 @router.post("/{user_id}/items", response_model=ItemCreateResponse)
 def add_food_item(user_id: int, new_item: FoodItem):
-    with db.engine.begin() as connection:
-        user_result = connection.execute(
-            sqlalchemy.text(
-                """
-                SELECT 1
-                FROM users
-                WHERE id = :user_id
-                """
-            ),
-            [{"user_id": user_id}]
-        ).one_or_none()
-
-        if not user_result:
-            raise HTTPException(status_code=404, detail="User does not exist.")
-
-        item_result = connection.execute(
-            sqlalchemy.text(
-                """
-                INSERT INTO user_items (user_id, name, calories, protein, carbs, fat)
-                VALUES (:user_id, :name, :calories, :protein, :carbs, :fat) 
-                RETURNING id
-                """
-            ),
-            [{
-                "user_id": user_id,
-                "name": new_item.name,
-                "calories": new_item.calories,
-                "protein": new_item.protein,
-                "carbs": new_item.carbs,
-                "fat": new_item.fat,
-            }]
-        ).one()
-
-    return ItemCreateResponse(user_id=user_id, item_id=item_result.id, status="created")
-
-@router.post("/{user_id}/items", response_model=ItemCreateResponse)
-def add_food_item(user_id: int, new_item: FoodItem):
 
     valid_user = validate_user(user_id)
     if not valid_user:
         raise HTTPException(status_code=404, detail="User does not exist.")
+
+    if new_item.name == "":
+        raise HTTPException(status_code=400, detail="Item name is required.")
 
     check_calories = new_item.calories > 0
     check_protein = new_item.protein > 0
@@ -560,7 +330,55 @@ def add_food_item(user_id: int, new_item: FoodItem):
                 "fat": new_item.fat,
             }]
         ).one_or_none()
-        
+
         status = "created" if item_result else "error; please try again"
 
     return ItemCreateResponse(user_id=user_id, item_id=item_result.id, status=status)
+
+class GetFoodItem(BaseModel):
+    id: int
+    name: str
+    #all values >= 0
+    calories: float = Field(ge=0)
+    protein: float = Field(ge=0)
+    carbs: float = Field(ge=0)
+    fat: float = Field(ge=0)
+
+class ItemGetResponse(BaseModel):
+    user_id: int
+    items: list[GetFoodItem]
+
+
+@router.get("/{user_id}/items", response_model=ItemGetResponse)
+def get_food_items(user_id: int):
+
+    valid_user = validate_user(user_id)
+    if not valid_user:
+        raise HTTPException(status_code=404, detail="User does not exist.")
+
+    with db.engine.begin() as connection:
+        result = connection.execute(
+            sqlalchemy.text(
+                """
+                SELECT id, name, calories, protein, carbs, fat
+                FROM user_items 
+                WHERE user_id = :user_id
+                """
+            ),
+            [{
+                "user_id": user_id
+            }]
+        ).all()
+
+        items = []
+        for row in result:
+            items.append(
+                GetFoodItem(id=row.id,
+                            name=row.name,
+                            calories=row.calories,
+                            protein=row.protein,
+                            carbs=row.carbs,
+                            fat=row.fat)
+            )
+
+        return ItemGetResponse(user_id=user_id, items=items)
