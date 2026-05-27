@@ -30,18 +30,7 @@ class UserCreateResponse(BaseModel):
     user_id: int
 
 
-class NewUserStats(BaseModel):
-    height: Optional[float] = Field(default=None, ge=0)
-    weight: Optional[float] = Field(default=None, ge=0)
-    age: Optional[int] = Field(default=None, ge=0)
-
-
-class UpdateUserResponse(BaseModel):
-    user_id: int
-    status: str
-
-
-def valid_user(user_id: int) -> bool:
+def validate_user(user_id: int) -> bool:
     with db.engine.begin() as connection:
         user_result = connection.execute(
             sqlalchemy.text(
@@ -128,6 +117,11 @@ def get_user(user_id: int):
             age=result.age,
         )
 
+#update_user models
+class UpdateUserResponse(BaseModel):
+    user_id: int
+    status: str
+
 
 #only updates fields that are not None
 #optimal version if time permits: use pythonic sql to build one query to execute?
@@ -140,29 +134,25 @@ def update_user(
 ):
     """Update height, weight, and/or age. Omit any field to leave it unchanged."""
 
+    #validate user
+    valid_user = validate_user(user_id)
+    if not valid_user:
+        raise HTTPException(status_code=404, detail="User does not exist.")
+
     # ensure values are either None or positive numbers
     check_weight = new_weight_lbs is None or new_weight_lbs > 0
     check_age = new_age is None or new_age > 0
     check_height = new_height_cm is None or new_height_cm > 0
 
+    if not (check_height and check_age and check_weight):
+        raise HTTPException(status_code=400, detail="Values must be greater than 0.")
+
+    #return immediately if nothing is given
+    if not (new_weight_lbs or new_height_cm or new_age):
+        return UpdateUserResponse(user_id=user_id, status="no change")
+
+    #change values
     with db.engine.begin() as connection:
-        user_result = connection.execute(
-            sqlalchemy.text(
-                """
-                SELECT * 
-                FROM users
-                WHERE id = :user_id
-                """
-            ),
-            [{"user_id": user_id}]
-        ).one_or_none()
-
-        if not user_result:
-            raise HTTPException(status_code=404, detail="User does not exist.")
-
-        if not (check_height and check_age and check_weight):
-            raise HTTPException(status_code=400, detail="Values must be greater than 0.")
-
         if new_height_cm and new_height_cm > 0:
             connection.execute(
                 sqlalchemy.text(
@@ -202,6 +192,7 @@ def update_user(
     return UpdateUserResponse(user_id=user_id, status="updated")
 
 
+# macro_goal_models
 class NutrientCategory(str, Enum):
     protein = "protein"
     carbs = "carbs"
