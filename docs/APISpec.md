@@ -352,7 +352,39 @@ Returns **all** meal plans for the user (not just the first one).
 
 Return nutrient summaries and goal progress for a specific day's meal logs.
 
-## Flow Order (Assuming Meal Logs and Goals exist)
+## Flow Order
+1. Get Daily Summary
+
+## 5.1 Get Daily Summary - `GET /statistics/{user_id}`
+
+### Request:
+
+```json
+{
+  "user_id": 20,
+  "date": "2026-04-01"
+}
+```
+
+### Response `200`:
+
+```json
+{
+  "date": "2026-04-01",
+  "calories": 1100,
+  "calorie_progress": "55.0 %",
+  "protein": 325,
+  "protein_progress": "250.0 %",
+  "carbs": 60,
+  "carbs_progress": "No Goal",
+  "fats": 30,
+  "fats_progress": "75.0 %",
+  "total_goals_met": 1
+}
+```
+
+### Error Responses:
+- `404 Not Found`: User does not exist.
 
 # 6. Admin
 
