@@ -14,6 +14,8 @@ test that a user's stats were updating correctly.
 ***Feedback:*** This test case seems to be working correctly and is a good test case to test
 that a majority of endpoints work as intended.
 
+---
+
 ## New Test Case #1 (Iris Aeron): Negative Nutrition Values
 
 **_Feedback:_** We modified our code to now check for negative values, so this test was good to implement in order to
@@ -28,6 +30,8 @@ test invalid input for the date section when creating a meal log.
 
 **_Feedback:_** We chose not to implement duplicate prevention because allowing repeated item IDs can reasonably
 represent multiple servings of the same food item within a single meal log.
+
+---
 
 ## New Test Case #1 (Sumedha Kundurthi): Invalid Time
 
