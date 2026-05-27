@@ -82,9 +82,9 @@ class UserPlansRemovePlanResponse(BaseModel):
     plan_id: int
     status: str
 
-class SameplanResponse(BaseModel):
+class SamePlanResponse(BaseModel):
     user_name: str
-    user_emal: str
+    user_email: str
     
 
 
@@ -500,7 +500,7 @@ def remove_plan(user_id: int, plan_id: int):
 ###DAVID WORK
 ###ADDED an API that matches a person with other people who share the same meal_plan 
 
-@router.get("/{user_id}/plan", response_model=list[SameplanResponse])
+@router.get("/{user_id}/plan", response_model=list[SamePlanResponse])
 def compare_meal_plan(user_id: int):
     """Return all plans for the user instead of just the first one."""
     with db.engine.connect() as conn:
@@ -553,7 +553,7 @@ def compare_meal_plan(user_id: int):
         print(f"Person with id {user_id} has the same plan as the following people")
         list_of_people = []
         for p in same:
-            list_of_people.append(SameplanResponse(
+            list_of_people.append(SamePlanResponse(
                 user_name = p.name,
                 user_email = p.email
             )
