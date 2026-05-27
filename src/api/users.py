@@ -206,23 +206,15 @@ class GoalCreateResponse(BaseModel):
 
 @router.post("/{user_id}/goals", response_model=GoalCreateResponse)
 def add_macro_goal(user_id: int, nutrient:NutrientCategory, quantity: int = 1):
+
+    valid_user = validate_user(user_id)
+    if not valid_user:
+        raise HTTPException(status_code=404, detail="User does not exist.")
+
+    if quantity <= 0:
+        raise HTTPException(status_code=400, detail="Value must be greater than 0.")
+
     with db.engine.begin() as connection:
-        user_result = connection.execute(
-            sqlalchemy.text(
-                """
-                SELECT 1
-                FROM users
-                WHERE id = :user_id
-                """
-            ),
-            [{
-                "user_id": user_id
-            }]
-        ).one_or_none()
-
-        if not user_result:
-            raise HTTPException(status_code=404, detail="User does not exist.")
-
         unit = "g" if nutrient is not NutrientCategory.calories else "kcal"
 
         result = connection.execute(
@@ -244,6 +236,47 @@ def add_macro_goal(user_id: int, nutrient:NutrientCategory, quantity: int = 1):
         status = "created" if result else "error; please try again."
 
         return GoalCreateResponse(user_id=user_id, status=status)
+
+
+# get_macro_goals models
+class MacroGoal(BaseModel):
+    nutrient: str
+    quantity: int
+    unit: str
+
+class MacroGoalResponse(BaseModel):
+    user_id: int
+    goals: list[MacroGoal]
+
+
+@router.get("/{user_id}/goals", response_model=MacroGoalResponse)
+def get_macro_goals(user_id: int):
+    valid_user = validate_user(user_id)
+    if not valid_user:
+        raise HTTPException(status_code=404, detail="User does not exist.")
+
+    with db.engine.begin() as connection:
+        result = connection.execute(
+            sqlalchemy.text(
+                """
+                SELECT nutrient, quantity, unit
+                FROM macro_goal
+                WHERE user_id = :user_id
+                """
+            ),
+            [{
+                "user_id": user_id
+            }]
+        ).all()
+
+        goals = []
+        for row in result:
+            goals.append(
+                MacroGoal(nutrient=row.nutrient, quantity=row.quantity, unit=row.unit)
+            )
+
+        return MacroGoalResponse(user_id=user_id, goals=goals)
+
 
 #meal log models
 #allowed meal categories
@@ -456,6 +489,43 @@ class ItemCreateResponse(BaseModel):
     user_id: int
     status: str
 
+
+@router.post("/{user_id}/items", response_model=ItemCreateResponse)
+def add_food_item(user_id: int, new_item: FoodItem):
+    with db.engine.begin() as connection:
+        user_result = connection.execute(
+            sqlalchemy.text(
+                """
+                SELECT 1
+                FROM users
+                WHERE id = :user_id
+                """
+            ),
+            [{"user_id": user_id}]
+        ).one_or_none()
+
+        if not user_result:
+            raise HTTPException(status_code=404, detail="User does not exist.")
+
+        item_result = connection.execute(
+            sqlalchemy.text(
+                """
+                INSERT INTO user_items (user_id, name, calories, protein, carbs, fat)
+                VALUES (:user_id, :name, :calories, :protein, :carbs, :fat) 
+                RETURNING id
+                """
+            ),
+            [{
+                "user_id": user_id,
+                "name": new_item.name,
+                "calories": new_item.calories,
+                "protein": new_item.protein,
+                "carbs": new_item.carbs,
+                "fat": new_item.fat,
+            }]
+        ).one()
+
+    return ItemCreateResponse(user_id=user_id, item_id=item_result.id, status="created")
 
 @router.post("/{user_id}/items", response_model=ItemCreateResponse)
 def add_food_item(user_id: int, new_item: FoodItem):
