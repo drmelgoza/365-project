@@ -175,6 +175,60 @@ def update_user_stats(user_id: int, new_user_stats: NewUserStats):
     return UpdateUserResponse(user_id=user_id, status="updated")
 
 
+class NutrientCategory(str, Enum):
+    protein = "protein"
+    carbs = "carbs"
+    fats = "fats"
+    calories = "calories"
+
+class GoalCreateResponse(BaseModel):
+    user_id: int
+    status: str
+
+
+
+
+@router.post("/{user_id}/goals", response_model=GoalCreateResponse)
+def add_macro_goal(user_id: int, nutrient:NutrientCategory, quantity: int = 1):
+    with db.engine.begin() as connection:
+        user_result = connection.execute(
+            sqlalchemy.text(
+                """
+                SELECT 1
+                FROM users
+                WHERE id = :user_id
+                """
+            ),
+            [{
+                "user_id": user_id
+            }]
+        ).one_or_none()
+
+        if not user_result:
+            raise HTTPException(status_code=404, detail="User does not exist.")
+
+        unit = "g" if nutrient is not NutrientCategory.calories else "kcal"
+
+        result = connection.execute(
+            sqlalchemy.text(
+                """
+                INSERT INTO macro_goal (user_id, nutrient, quantity, unit)
+                VALUES (:user_id, :nutrient, :quantity, :unit)
+                RETURNING id
+                """
+            ),
+            [{
+                "user_id": user_id,
+                "nutrient": nutrient,
+                "quantity": quantity,
+                "unit": unit
+            }]
+        ).one_or_none()
+
+        status = "created" if result else "error; please try again."
+
+        return GoalCreateResponse(user_id=user_id, status=status)
+
 #meal log models
 
 

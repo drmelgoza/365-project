@@ -550,7 +550,7 @@ def compare_meal_plan(user_id: int):
             [{"schedule": person.schedule}]
         ).all()
 
-        print(f"Perosn with id {user_id} has the same plan as the following people")
+        print(f"Person with id {user_id} has the same plan as the following people")
         list_of_people = []
         for p in same:
             list_of_people.append(SameplanResponse(
