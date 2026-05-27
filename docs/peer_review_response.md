@@ -1,106 +1,39 @@
 # Peer Review Feedback
 
-> [!NOTE]
-> Document not yet finished.
-
 > [!IMPORTANT] 
-> All new test cases in the [v3_manual_test_results.md](365-project/test/v3_manual_test_results.md) file
+> All new test cases in the [v3_manual_test_results.md](https://github.com/drmelgoza/365-project/blob/main/test/v3_manual_test_results.md) file
 
-## Flow 1 Testing (Victor Wu)
+## New Test Case #1 (Victor Wu): Updating User Stats
 
-There wasn't really an issue in the code since the endpoint
-for this flow successfully returns the id for the user and
-an error if the user's email already exists. The command that
-we supplied was a might've been incorrectly formatted, so that
-was most likely the issue, but that's been resolved, and
-the correct output should be returning now.
-
-### Example Flow 1: Profile editing and creation
-
-Curl command:
-
-```bash
- curl -X 'POST' \
-   'https://datafit-meal-tracker.onrender.com/users/' \
-   -H 'accept: application/json' \
-   -H 'access_token: ***' \
-   -H 'Content-Type: application/json' \
-   -d '{
-   "username": "karate_kid_84",
-   "name": "Daniel",
-   "email": "daniel@somemail.com",
-   "height": 68,
-   "weight": 125,
-   "age": 19
- }'
-```
-This should be the correct command (a typo was fixed).
-> [!IMPORTANT]
-> Make sure to replace the `***` where it says
-> `'access_token: ***'` with the actual api key.
-
-If the user doesn't exist yet:
-```json
-{"user_id":2}
-```
-
-If user does exist:
-```json
-{"detail":"User with this email already exists."}
-```
-
-## New Test Case #1 (Victor Wu)
-Curl command:
-
-```bash
-curl -X POST \
- "https://datafit-meal-tracker.onrender.com/users/" \
- -H "accept: application/json" \
- -H "access_token: ***" \
- -H "Content-Type: application/json" \
- -d '{
- "username": "viciswoozy",
- "name": "Victor",
- "email": "victor@somemail.com",
- "height": 70,
- "weight": 185,
- "age": 20
-}'
-```
-
-Result for creation:
-
-```json
-{"user_id":11}
-```
-
-Curl command for updating users stats:
-
-```bash
-curl -X PATCH \
-  "https://datafit-meal-tracker.onrender.com/users/11" \
-  -H "accept: application/json" \
-  -H "access_token: ***" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "height": 100
-  }'
-```
-
-Results for updating:
-
-```json
-{"user_id":11,"status":"updated"}
-```
 ***Feedback:***
-New test case seems to be working correctly.
+New test case was implemented and seems to be working correctly. We thought the test was good to implement to
+test that a user's stats were updating correctly.
 
-## New Test Case #2
+## New Test Case #2 (Victor Wu): Basic Flow Test
 
 ***Feedback:*** This test case seems to be working correctly and is a good test case to test
 that a majority of endpoints work as intended.
 
----
+## New Test Case #1 (Iris Aeron): Negative Nutrition Values
 
-## Test Case #3 (Iris Aeron)
+**_Feedback:_** We modified our code to now check for negative values, so this test was good to implement in order to
+prevent any negative values from being logged into the database.
 
+## New Test Case #2 (Iris Aeron): Invalid Meal Log Date
+
+**_Feedback:_** This test case was implemented and was a good test case to implement because it helped
+test invalid input for the date section when creating a meal log.
+
+## New Test Case #3 (Iris Aeron): Duplicate Item in the Same Log
+
+**_Feedback:_** We chose not to implement duplicate prevention because allowing repeated item IDs can reasonably
+represent multiple servings of the same food item within a single meal log.
+
+## New Test Case #1 (Sumedha Kundurthi): Invalid Time
+
+**_Feedback:_** This test case is similar to a previous test case, so it was omitted.
+
+## New Test Case #2 (Sumedha Kundurthi): Delete non-existent item
+
+**_Feedback:_** We implemented this test case because checking whether an item exists before deletion helps prevent
+invalid operations from being performed on non-existent entries in the database.
