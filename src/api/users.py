@@ -529,21 +529,20 @@ def add_food_item(user_id: int, new_item: FoodItem):
 
 @router.post("/{user_id}/items", response_model=ItemCreateResponse)
 def add_food_item(user_id: int, new_item: FoodItem):
+
+    valid_user = validate_user(user_id)
+    if not valid_user:
+        raise HTTPException(status_code=404, detail="User does not exist.")
+
+    check_calories = new_item.calories > 0
+    check_protein = new_item.protein > 0
+    check_carbs = new_item.carbs > 0
+    check_fat = new_item.fat > 0
+
+    if not (check_calories and check_protein and check_carbs and check_fat):
+        raise HTTPException(status_code=400, detail="Nutrient values must be greater than 0.")
+
     with db.engine.begin() as connection:
-        user_result = connection.execute(
-            sqlalchemy.text(
-                """
-                SELECT 1
-                FROM users
-                WHERE id = :user_id
-                """
-            ),
-            [{"user_id": user_id}]
-        ).one_or_none()
-
-        if not user_result:
-            raise HTTPException(status_code=404, detail="User does not exist.")
-
         item_result = connection.execute(
             sqlalchemy.text(
                 """
@@ -560,6 +559,8 @@ def add_food_item(user_id: int, new_item: FoodItem):
                 "carbs": new_item.carbs,
                 "fat": new_item.fat,
             }]
-        ).one()
+        ).one_or_none()
+        
+        status = "created" if item_result else "error; please try again"
 
-    return ItemCreateResponse(user_id=user_id, item_id=item_result.id, status="created")
+    return ItemCreateResponse(user_id=user_id, item_id=item_result.id, status=status)
