@@ -8,7 +8,6 @@ from sqlalchemy import Boolean
 
 from src.api import auth
 from src import database as db
-from src.api.logs import ItemDeleteResponse
 
 router = APIRouter(
     prefix="/users",
@@ -62,6 +61,25 @@ def validate_item(item_id: int) -> bool:
         ).one_or_none()
 
         return True if item_result else False
+
+def validate_goal(user_id: int, goal:str) -> bool:
+    with db.engine.begin() as connection:
+        goal_result = connection.execute(
+            sqlalchemy.text(
+                """
+                SELECT 1
+                FROM macro_goal
+                WHERE user_id = :user_id
+                AND nutrient = :goal
+                """
+            ),
+            [{
+                "user_id": user_id,
+                "goal": goal
+            }]
+        ).one_or_none()
+
+        return True if goal_result else False
 
 
 @router.post("/", response_model=UserCreateResponse)
@@ -296,6 +314,49 @@ def get_macro_goals(user_id: int):
         return MacroGoalResponse(user_id=user_id, goals=goals)
 
 
+class GoalCategory(str, Enum):
+    protein = "protein"
+    carbs = "carbs"
+    fats = "fats"
+    calories = "calories"
+
+class GoalDeleteResponse(BaseModel):
+    user_id: int
+    goal: GoalCategory
+    status: str
+
+@router.delete("/{user_id}/goals/{goal}", response_model=GoalDeleteResponse)
+def delete_goal(user_id: int, goal: GoalCategory):
+    valid_user = validate_user(user_id)
+    if not valid_user:
+        raise HTTPException(status_code=404, detail="User does not exist.")
+
+    valid_goal = validate_goal(user_id, goal.value)
+    if not valid_goal:
+        raise HTTPException(status_code=404, detail="Goal of this category does not exist for this user.")
+
+    with db.engine.begin() as connection:
+        result = connection.execute(
+            sqlalchemy.text(
+                """
+                DELETE FROM macro_goal
+                WHERE user_id = :user_id
+                AND nutrient = :nutrient
+                RETURNING 1
+                """
+            ),
+            [{
+                "user_id": user_id,
+                "nutrient": goal.value
+            }]
+        ).one_or_none()
+
+        status = "deleted" if result else "error; please try again."
+        return GoalDeleteResponse(user_id=user_id, goal=goal, status=status)
+
+
+
+
 #food item models
 class FoodItem(BaseModel):
     name: str
@@ -402,6 +463,11 @@ def get_food_items(user_id: int):
         return ItemGetResponse(user_id=user_id, items=items)
 
 #Ensure delete uses cascade
+class ItemDeleteResponse(BaseModel):
+    user_id: int
+    item_id: int
+    status: str
+
 @router.delete("/{user_id}/items/{item_id}", response_model=ItemDeleteResponse)
 def delete_food_item(user_id: int, item_id: int):
     valid_user = validate_user(user_id)
@@ -413,17 +479,21 @@ def delete_food_item(user_id: int, item_id: int):
         raise HTTPException(status_code=404, detail="Item does not exist.")
 
     with db.engine.begin() as connection:
-        connection.execute(
+        result = connection.execute(
             sqlalchemy.text(
                 """
                 DELETE FROM user_items 
                 WHERE user_id = :user_id
                 AND id = :item_id
-                
+                RETURNING id
                 """
             ),
             [{
                 "user_id": user_id,
                 "item_id": item_id
             }]
-        )
+        ).one_or_none()
+
+        status = "deleted" if result else "error; please try again"
+
+        return ItemDeleteResponse(user_id=user_id, item_id=item_id, status=status)
