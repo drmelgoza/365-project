@@ -98,7 +98,7 @@ class MealLogResponse(BaseModel):
     items: list[LoggedItem]
 
 
-@router.post("/{user_id}/logs", response_model=LogCreationResponse)
+@router.post("/{user_id}", response_model=LogCreationResponse)
 def create_meal_log(user_id: int, info: LogInfo):
 
     valid_user = validate_user(user_id)
@@ -124,7 +124,7 @@ def create_meal_log(user_id: int, info: LogInfo):
     return LogCreationResponse(log_id=result.id)
 
 
-@router.get("/{user_id}/logs/{log_id}", response_model=MealLogResponse)
+@router.get("/{user_id}/{log_id}", response_model=MealLogResponse)
 def get_meal_log(user_id: int, log_id: int):
     valid_user = validate_user(user_id)
     if not valid_user:
@@ -184,7 +184,7 @@ class LogUpdateResponse(BaseModel):
     status: str
 
 
-@router.post("/{user_id}/logs/{log_id}/items", response_model=LogUpdateResponse)
+@router.post("/{user_id}/{log_id}/items", response_model=LogUpdateResponse)
 def add_items_to_log(user_id: int, log_id: int, items: NewLogItems):
     """Add one or more food items to an existing meal log."""
     with db.engine.begin() as connection:
@@ -237,66 +237,9 @@ def add_items_to_log(user_id: int, log_id: int, items: NewLogItems):
 
     return LogUpdateResponse(status="logged")
 
-#To Delete Later?
-@router.post("/{log_id}/items", response_model=LogStatusResponse)
-def add_to_log(user_id: int, log_id: int, items: NewLogItems):
-    """Add one or more food items to an existing meal log."""
-    with db.engine.begin() as connection:
-        log_result = connection.execute(
-            sqlalchemy.text(
-                """
-                SELECT 1 
-                FROM user_logs 
-                WHERE id = :log_id
-                """
-            ),
-            [{"log_id": log_id}]
-        ).one_or_none()
 
-        if not log_result:
-            raise HTTPException(status_code=404, detail="Log does not exist.")
-
-        existing_items = connection.execute(
-            sqlalchemy.text(
-                """
-                SELECT id
-                FROM user_items
-                WHERE id = ANY(:item_ids) AND user_id = :user_id
-                """
-            ),
-            [{
-                "user_id": user_id,
-                "item_ids": items.item_ids,
-            }]
-        ).fetchall()
-
-        existing_item_ids = {row.id for row in existing_items}
-
-        for item_id in items.item_ids:
-            if item_id not in existing_item_ids:
-                raise HTTPException(
-                    status_code=404,
-                    detail=f"Item {item_id} not found."
-                )
-
-            connection.execute(
-                sqlalchemy.text(
-                    """
-                    INSERT INTO log_items (log_id, item_id) 
-                    VALUES (:log_id, :item_id)
-                    """
-                ),
-                [{
-                    "log_id": log_id,
-                    "item_id": item_id
-                }]
-            )
-
-    return LogStatusResponse(item_ids=items.item_ids, status="logged")
-
-
-@router.delete("/{log_id}/items/{item_id}", response_model=ItemDeleteResponse)
-def remove_from_log(log_id: int, item_id: int):
+@router.delete("/{user_id}/{log_id}/items/{item_id}", response_model=ItemDeleteResponse)
+def remove_items_from_log(user_id, log_id: int, item_id: int):
     with db.engine.begin() as connection:
         log_result = connection.execute(
             sqlalchemy.text(

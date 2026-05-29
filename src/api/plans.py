@@ -90,7 +90,7 @@ class SamePlanResponse(BaseModel):
 
 #endpoints
 
-@router.post("/{user_id}/plan", response_model=MealPlanCreateResponse)
+@router.post("/{user_id}", response_model=MealPlanCreateResponse)
 def create_meal_plan(user_id: int, new_plan: MealPlanCreate):
     with db.engine.begin() as conn:
         user_result = conn.execute(
@@ -135,7 +135,7 @@ def create_meal_plan(user_id: int, new_plan: MealPlanCreate):
     )
 
 
-@router.post("/{user_id}/plan/{plan_id}/items", response_model=MealPlanAddResponse)
+@router.post("/{user_id}/{plan_id}/items", response_model=MealPlanAddResponse)
 def add_meal_to_plan(user_id: int, plan_id: int, new_item: MealPlanAdd):
     with db.engine.begin() as conn:
         user_result = conn.execute(
@@ -393,8 +393,8 @@ def get_meal_plan_by_day(user_id: int, plan_name: str):
         items=items
     )
 
-
-@router.delete("/{user_id}/plan/items/{item_id}", response_model=UserPlansRemoveItemResponse)
+#add plan id
+@router.delete("/{user_id}/{plan_id}/items/{item_id}", response_model=UserPlansRemoveItemResponse)
 def remove_item_from_plan(user_id: int, item_id: int):
     with db.engine.begin() as conn:
         user_result = conn.execute(
@@ -443,7 +443,7 @@ def remove_item_from_plan(user_id: int, item_id: int):
     return UserPlansRemoveItemResponse(item_id=item_id, status="removed")
 
 
-@router.delete("/{user_id}/plan/{plan_id}", response_model=UserPlansRemovePlanResponse)
+@router.delete("/{user_id}/{plan_id}", response_model=UserPlansRemovePlanResponse)
 def remove_plan(user_id: int, plan_id: int):
     with db.engine.begin() as conn:
         user_result = conn.execute(
@@ -500,7 +500,7 @@ def remove_plan(user_id: int, plan_id: int):
 ###DAVID WORK
 ###ADDED an API that matches a person with other people who share the same meal_plan 
 
-@router.get("/{user_id}/plan", response_model=list[SamePlanResponse])
+@router.get("/{user_id}", response_model=list[SamePlanResponse])
 def compare_meal_plan(user_id: int):
     """Return all plans for the user instead of just the first one."""
     with db.engine.connect() as conn:

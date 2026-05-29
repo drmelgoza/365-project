@@ -8,6 +8,7 @@ from sqlalchemy import Boolean
 
 from src.api import auth
 from src import database as db
+from src.api.logs import ItemDeleteResponse
 
 router = APIRouter(
     prefix="/users",
@@ -44,6 +45,23 @@ def validate_user(user_id: int) -> bool:
         ).one_or_none()
 
         return True if user_result else False
+
+def validate_item(item_id: int) -> bool:
+    with db.engine.begin() as connection:
+        item_result = connection.execute(
+            sqlalchemy.text(
+                """
+                SELECT 1
+                FROM user_items
+                WHERE id = :item_id
+                """
+            ),
+            [{
+                "item_id": item_id,
+            }]
+        ).one_or_none()
+
+        return True if item_result else False
 
 
 @router.post("/", response_model=UserCreateResponse)
@@ -382,3 +400,30 @@ def get_food_items(user_id: int):
             )
 
         return ItemGetResponse(user_id=user_id, items=items)
+
+#Ensure delete uses cascade
+@router.delete("/{user_id}/items/{item_id}", response_model=ItemDeleteResponse)
+def delete_food_item(user_id: int, item_id: int):
+    valid_user = validate_user(user_id)
+    if not valid_user:
+        raise HTTPException(status_code=404, detail="User does not exist.")
+
+    valid_item = validate_item(item_id)
+    if not valid_item:
+        raise HTTPException(status_code=404, detail="Item does not exist.")
+
+    with db.engine.begin() as connection:
+        connection.execute(
+            sqlalchemy.text(
+                """
+                DELETE FROM user_items 
+                WHERE user_id = :user_id
+                AND id = :item_id
+                
+                """
+            ),
+            [{
+                "user_id": user_id,
+                "item_id": item_id
+            }]
+        )
