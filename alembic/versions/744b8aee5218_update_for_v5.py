@@ -59,9 +59,13 @@ def upgrade() -> None:
     #ex: "handful" of grapes or "1 cup" of grapes or "bunch" of grapes
     op.add_column("plan_items", sa.Column("quantity_w_unit", sa.String, nullable=True))
 
+    op.rename_table("macro_goal", "user_goals")
+
 
 def downgrade() -> None:
     """Downgrade schema."""
+    op.rename_table("user_goals", "macro_goal")
+
     op.drop_column("plan_items", "quantity_w_unit")
 
     op.drop_column("user_plans", "schedule_type")

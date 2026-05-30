@@ -68,7 +68,7 @@ def validate_goal(user_id: int, goal:str) -> bool:
             sqlalchemy.text(
                 """
                 SELECT 1
-                FROM macro_goal
+                FROM user_goals
                 WHERE user_id = :user_id
                 AND nutrient = :goal
                 """
@@ -282,12 +282,30 @@ def add_macro_goal(user_id: int, nutrient:NutrientCategory, quantity: int = 1):
         raise HTTPException(status_code=400, detail="Value must be greater than 0.")
 
     with db.engine.begin() as connection:
+        search_result = connection.execute(
+            sqlalchemy.text(
+                """
+                SELECT 1
+                FROM user_goals
+                WHERE user_id = :user_id
+                AND nutrient = :nutrient
+                """
+            ),
+            [{
+                "user_id": user_id,
+                "nutrient": nutrient,
+            }]
+        ).one_or_none()
+
+        if search_result:
+            return GoalCreateResponse(user_id=user_id, status="goal already exists.")
+
         unit = "g" if nutrient is not NutrientCategory.calories else "kcal"
 
         result = connection.execute(
             sqlalchemy.text(
                 """
-                INSERT INTO macro_goal (user_id, nutrient, quantity, unit)
+                INSERT INTO user_goals (user_id, nutrient, quantity, unit)
                 VALUES (:user_id, :nutrient, :quantity, :unit)
                 RETURNING id
                 """
@@ -327,7 +345,7 @@ def get_macro_goals(user_id: int):
             sqlalchemy.text(
                 """
                 SELECT nutrient, quantity, unit
-                FROM macro_goal
+                FROM user_goals
                 WHERE user_id = :user_id
                 """
             ),
@@ -351,6 +369,37 @@ class GoalCategory(str, Enum):
     fats = "fats"
     calories = "calories"
 
+
+@router.patch("/{user_id}/goals/{goal}", response_model=GoalCreateResponse)
+def update_macro_goal(user_id: int, goal: GoalCategory, quantity: int = 1):
+    valid_user = validate_user(user_id)
+    if not valid_user:
+        raise HTTPException(status_code=404, detail="User does not exist.")
+
+    with db.engine.begin() as connection:
+        search_result = connection.execute(
+            sqlalchemy.text(
+                """
+                UPDATE user_goals
+                SET quantity = :quantity
+                WHERE user_id = :user_id 
+                AND nutrient = :nutrient
+                RETURNING 1
+                """
+            ),
+            [{
+                "user_id": user_id,
+                "quantity": quantity,
+                "nutrient": goal.value,
+            }]
+        ).one_or_none()
+
+        status = "updated" if search_result else "goal does not exist."
+
+        return GoalCreateResponse(user_id=user_id, status=status)
+
+
+
 class GoalDeleteResponse(BaseModel):
     user_id: int
     goal: GoalCategory
@@ -370,7 +419,7 @@ def delete_goal(user_id: int, goal: GoalCategory):
         result = connection.execute(
             sqlalchemy.text(
                 """
-                DELETE FROM macro_goal
+                DELETE FROM user_goals
                 WHERE user_id = :user_id
                 AND nutrient = :nutrient
                 RETURNING 1
@@ -493,7 +542,9 @@ def get_food_items(user_id: int):
 
         return ItemGetResponse(user_id=user_id, items=items)
 
-#Ensure delete uses cascade
+
+
+
 class ItemDeleteResponse(BaseModel):
     user_id: int
     item_id: int
