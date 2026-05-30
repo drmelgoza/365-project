@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from src.api import admin, users, logs, plans, statistics
+from src.api import admin, users, logs, plans, statistics, goals, items
 from starlette.middleware.cors import CORSMiddleware
 
 description = """
@@ -7,8 +7,11 @@ Data Fit Meal Tracker is your perfect place for storing meal plans and logging y
 """
 tags_metadata = [
     {"name": "admin", "description": "Reset the tracker state."},
-    {"name": "users", "description": "Manage User Profiles and Items"},
-    {"name": "logs", "description": "Manage Meal Logs and Logged Items"},
+    {"name": "users", "description": "Manage User Profiles"},
+    {"name": "user stats", "description": "Retrieve Daily Nutrient Totals and Macro Progress"},
+    {"name": "user food items", "description": "Manage Items used for Logging and Planning"},
+    {"name": "user macro goals", "description": "Manage macro goals"},
+    {"name": "user meal logs", "description": "Manage Meal Logs and Logged Items"},
     {"name": "plans", "description": "Manage Meal Plans and Logged Items"},
 ]
 
@@ -36,10 +39,14 @@ app.add_middleware(
 
 app.include_router(admin.router)
 app.include_router(users.router)
+app.include_router(statistics.router)
+
+app.include_router(items.router)
+
+app.include_router(goals.router)
 app.include_router(logs.router)
 app.include_router(plans.router)
 
-app.include_router(statistics.router)
 
 
 @app.get("/")

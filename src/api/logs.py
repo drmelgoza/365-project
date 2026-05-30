@@ -8,8 +8,8 @@ from enum import Enum
 
 
 router = APIRouter(
-    prefix="/logs",
-    tags=["logs"],
+    prefix="/users",
+    tags=["user meal logs"],
     dependencies=[Depends(auth.get_api_key)],
 )
 
@@ -89,7 +89,7 @@ class LogCreationResponse(BaseModel):
     log_id: int
 
 
-@router.post("/{user_id}", response_model=LogCreationResponse)
+@router.post("/{user_id}/logs", response_model=LogCreationResponse)
 def create_meal_log(user_id: int, category: MealCategory, log_date: date=date.today()):
 
     valid_user = validate_user(user_id)
@@ -145,7 +145,7 @@ class MealLogResponse(BaseModel):
     results: list[LogsByDay]
 
 
-@router.get("/{user_id}", response_model=MealLogResponse)
+@router.get("/{user_id}/logs", response_model=MealLogResponse)
 def get_meal_logs(user_id: int, log_id: int = None, log_date:date = None, log_category:MealCategory=None):
     metadata_obj = sqlalchemy.MetaData()
     log_items = sqlalchemy.Table("log_items", metadata_obj, autoload_with=db.engine)
@@ -246,7 +246,7 @@ class LogDeleteResponse(BaseModel):
     status: str
 
 
-@router.delete("/{user_id}/{log_id}", response_model=LogDeleteResponse)
+@router.delete("/{user_id}/logs/{log_id}", response_model=LogDeleteResponse)
 def delete_meal_log(user_id: int, log_id: int):
     valid_user = validate_user(user_id)
     if not valid_user:
@@ -277,7 +277,7 @@ def delete_meal_log(user_id: int, log_id: int):
         return LogDeleteResponse(user_id=user_id, log_id=log_id, status=status)
 
 
-@router.post("/{user_id}/{log_id}/items", response_model=LogUpdateResponse)
+@router.post("/{user_id}/logs/{log_id}/items", response_model=LogUpdateResponse)
 def add_item_to_log(user_id: int, log_id: int, item_id: int, quantity: int = 1, unit: str = 'handful'):
     """Add a food item to an existing meal log."""
     valid_user = validate_user(user_id)
@@ -314,7 +314,7 @@ class ItemDeleteResponse(BaseModel):
     status: str
 
 
-@router.delete("/{user_id}/{log_id}/items/{item_id}", response_model=ItemDeleteResponse)
+@router.delete("/{user_id}/logs/{log_id}/items/{item_id}", response_model=ItemDeleteResponse)
 def remove_item_from_log(user_id:int, log_id: int, item_id: int):
     valid_user = validate_user(user_id)
     if not valid_user:

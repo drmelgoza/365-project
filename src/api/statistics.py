@@ -8,8 +8,8 @@ from datetime import date
 
 
 router = APIRouter(
-    prefix="/statistics",
-    tags=["statistics"],
+    prefix="/users",
+    tags=["user stats"],
     dependencies=[Depends(auth.get_api_key)],
 )
 
@@ -27,7 +27,7 @@ class MacroTotalResponse(BaseModel):
 
 
 
-@router.get("/{user_id}", response_model=None)
+@router.get("/{user_id}/stats", response_model=None)
 def get_daily_summary(user_id: int, summary_date: date=date.today()):
     with db.engine.begin() as connection:
         result = connection.execute(
