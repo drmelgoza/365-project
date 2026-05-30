@@ -159,6 +159,8 @@ class GoalCategory(str, Enum):
 
 class GoalUpdateResponse(BaseModel):
     user_id: int
+    category: GoalCategory
+    new_value: int
     status: str
 
 
@@ -192,7 +194,7 @@ def update_macro_goal(user_id: int, goal: GoalCategory, quantity: int = 1):
 
         status = "updated" if search_result else "error; please try again."
 
-        return GoalUpdateResponse(user_id=user_id, status=status)
+        return GoalUpdateResponse(user_id=user_id, category=goal, new_value= quantity, status=status)
 
 
 

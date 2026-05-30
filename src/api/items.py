@@ -151,6 +151,7 @@ def get_food_items(user_id: int):
 class ItemPatchResponse(BaseModel):
     user_id: int
     item_id: int
+    changed_values: dict[str, float]
     status: str
 
 
@@ -173,8 +174,16 @@ def update_food_item(
     if not valid_item:
         raise HTTPException(status_code=404, detail="Item does not exist.")
 
-    if not (new_name and new_calories and new_protein and new_carbs and new_fat):
-        return ItemPatchResponse(user_id=user_id, item_id=item_id, status="no change")
+    check_calories = not new_calories or new_calories > 0
+    check_protein = not new_protein or new_protein > 0
+    check_carbs = not new_carbs or new_carbs > 0
+    check_fat = not new_fat or new_fat > 0
+
+    if not (new_name or new_calories or new_protein or new_carbs or new_fat):
+        return ItemPatchResponse(user_id=user_id, item_id=item_id, changed_values={}, status="no change")
+
+    if not (check_calories and check_protein and check_carbs and check_fat):
+        raise HTTPException(status_code=400, detail="Values must be greater than 0.")
 
     metadata = sqlalchemy.MetaData()
     user_items = sqlalchemy.Table("user_items", metadata, autoload_with=db.engine)
@@ -185,27 +194,34 @@ def update_food_item(
         .where(user_items.c.user_id == user_id)
     )
 
+    changed_values = {}
+
     if new_name:
         query = query.values(name=new_name)
+        changed_values["name"] = new_name
 
     if new_calories:
         query = query.values(calories=new_calories)
+        changed_values["calories"] = new_calories
 
     if new_protein:
         query = query.values(protein=new_protein)
+        changed_values["protein"] = new_protein
 
     if new_carbs:
         query = query.values(carbs=new_carbs)
+        changed_values["carbs"] = new_carbs
 
     if new_fat:
         query = query.values(fat=new_fat)
+        changed_values["fat"] = new_fat
 
     with db.engine.begin() as connection:
         result = connection.execute(query.returning(1)).one_or_none()
 
         status = "updated" if result else "error; please try again"
 
-    return ItemPatchResponse(user_id=user_id, item_id=item_id, status=status)
+    return ItemPatchResponse(user_id=user_id, item_id=item_id, changed_values=changed_values, status=status)
 
 class ItemDeleteResponse(BaseModel):
     user_id: int
