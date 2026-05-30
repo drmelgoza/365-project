@@ -173,6 +173,9 @@ def update_food_item(
     if not valid_item:
         raise HTTPException(status_code=404, detail="Item does not exist.")
 
+    if not (new_name and new_calories and new_protein and new_carbs and new_fat):
+        return ItemPatchResponse(user_id=user_id, item_id=item_id, status="no change")
+
     metadata = sqlalchemy.MetaData()
     user_items = sqlalchemy.Table("user_items", metadata, autoload_with=db.engine)
 

@@ -207,6 +207,7 @@ def get_user(user_id: int):
 #update_user models
 class UpdateUserResponse(BaseModel):
     user_id: int
+    updated_values: dict[str, str | int]
     status: str
 
 
@@ -217,7 +218,7 @@ def update_user(
         user_id: int,
         new_weight: float = None,
         new_age: int = None,
-        new_height: float = None
+        new_height: str = None
 ):
 
     """Update height, weight, and/or age. Omit any field to leave it unchanged."""
@@ -230,54 +231,78 @@ def update_user(
     # ensure values are either None or positive numbers
     check_weight = new_weight is None or new_weight > 0
     check_age = new_age is None or new_age > 0
-    check_height = new_height is None or new_height > 0
+    check_height = False
+
+    with db.engine.begin() as connection:
+        result = connection.execute(
+            sqlalchemy.text(
+                """
+                SELECT height_unit
+                FROM users
+                WHERE id = :user_id
+                """
+            ),
+            [{
+                "user_id": user_id
+            }]
+        ).one()
+
+        if new_height:
+            if result.height_unit == "ft/in":
+                new_height = new_height.strip()
+                format_match = re.search(r"^[0-9]+\'[0-9]+\"$", new_height)
+                if not format_match and not new_height.isnumeric():
+                    check_height = False
+                elif not format_match:
+                    check_height = True
+                    numeric_new_height = int(new_height)
+                else:
+                    check_height = True
+                    feet, inches = new_height.split("'")
+                    inches = int(inches.replace('"', ""))
+                    feet = int(feet)
+                    numeric_new_height = inches + (feet * 12)
+            else:
+                check_height = True
+                numeric_new_height = int(new_height)
+        else:
+            check_height = True
+            numeric_new_height = None
+
 
     if not (check_height and check_age and check_weight):
-        raise HTTPException(status_code=400, detail="Values must be greater than 0.")
+        raise HTTPException(status_code=400, detail="Values must be greater than 0 and correctly formatted.")
 
     #return immediately if nothing is given
     if not (new_weight or new_height or new_age):
         return UpdateUserResponse(user_id=user_id, status="no change")
 
+    metadata = sqlalchemy.MetaData()
+    users = sqlalchemy.Table("users", metadata, autoload_with=db.engine)
+
+    query = sqlalchemy.update(users).where(users.c.id == user_id).returning(1)
+
+    updated_values = {}
+
+    if numeric_new_height and numeric_new_height > 0:
+        query = query.values(height=numeric_new_height)
+        updated_values["height"] = numeric_new_height
+
+    if new_weight and new_weight > 0:
+        query = query.values(weight=new_weight)
+        updated_values["weight"] = new_weight
+
+    if new_age and new_age > 0:
+        query = query.values(age=new_age)
+        updated_values["age"] = new_age
+
     #change values
     with db.engine.begin() as connection:
-        if new_height and new_height > 0:
-            connection.execute(
-                sqlalchemy.text(
-                    """
-                    UPDATE users
-                    SET height = :height 
-                    WHERE id = :user_id
-                    """
-                ),
-                [{"height": new_height, "user_id": user_id}]
-            )
+        result = connection.execute(query).one_or_none()
 
-        if new_weight and new_weight > 0:
-            connection.execute(
-                sqlalchemy.text(
-                    """
-                    UPDATE users
-                    SET weight = :weight
-                    WHERE id = :user_id
-                    """
-                ),
-                [{"weight": new_weight, "user_id": user_id}]
-            )
+        status = "updated" if result else "error; please try again"
 
-        if new_age and new_age > 0:
-            connection.execute(
-                sqlalchemy.text(
-                    """
-                    UPDATE users
-                    SET age = :age
-                    WHERE id = :user_id
-                    """
-                ),
-                [{"age": new_age, "user_id": user_id}]
-            )
-
-    return UpdateUserResponse(user_id=user_id, status="updated")
+    return UpdateUserResponse(user_id=user_id, updated_values=updated_values, status=status)
 
 
 class UserDeleteResponse(BaseModel):
