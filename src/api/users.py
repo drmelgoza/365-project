@@ -228,6 +228,37 @@ def update_user(
     return UpdateUserResponse(user_id=user_id, status="updated")
 
 
+class UserDeleteResponse(BaseModel):
+    user_id: int
+    status: str
+
+
+@router.delete("/{user_id}", response_model=UserDeleteResponse)
+def delete_user(user_id: int):
+    valid_user = validate_user(user_id)
+    if not valid_user:
+        raise HTTPException(status_code=404, detail="User does not exist.")
+
+    with db.engine.begin() as connection:
+        result = connection.execute(
+            sqlalchemy.text(
+                """
+                DELETE FROM users
+                WHERE id = :user_id
+                RETURNING 1
+                """
+            ),
+            [{
+                "user_id": user_id,
+            }]
+        ).one_or_none()
+
+        status = "deleted" if result else "error; please try again."
+
+        return UserDeleteResponse(user_id=user_id, status=status)
+
+
+
 # macro_goal_models
 class NutrientCategory(str, Enum):
     protein = "protein"
