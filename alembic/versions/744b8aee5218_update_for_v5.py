@@ -20,16 +20,39 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema."""
+    #Update foreign keys to perform cascading deletes
     op.drop_constraint("log_items_item_id_fkey", "log_items", type_="foreignkey")
     op.drop_constraint("log_items_log_id_fkey", "log_items", type_="foreignkey")
     op.create_foreign_key("FK_User_Items", "log_items", "user_items",  ["item_id"], ["id"], ondelete="CASCADE")
     op.create_foreign_key("FK_user_logs", "log_items", "user_logs", ["log_id"], ["id"], ondelete="CASCADE")
 
+    op.drop_constraint("plan_items_plan_id_fkey", "plan_items", type_="foreignkey")
+    op.create_foreign_key("FK_plan_items", "plan_items", "user_plans", ["plan_id"], ["id"])
+
+    #remove "schedule" in place of "schedule type" and "days"; keeps the two info pieces separate
+    op.drop_column("user_plans", "schedule")
+    op.add_column("user_plans", sa.Column("schedule_type", sa.String(), nullable=False))
+    op.add_column("user_plans", sa.Column("days", sa.ARRAY(sa.String()), nullable=False))
+
+    #add optional quantity for meal plan items
+    #unlike macros, many ways to measure portions
+    #keep this field as a string to allow for user customization for portioning
+    #ex: "handful" of grapes or "1 cup" of grapes or "bunch" of grapes
+    op.add_column("plan_items", sa.Column("quantity_w_unit", sa.String, nullable=True))
+
 
 def downgrade() -> None:
     """Downgrade schema."""
+    op.drop_column("plan_items", "quantity")
+
+    op.drop_column("user_plans", "schedule_type")
+    op.drop_column("user_plans", "days")
+    op.add_column("user_plans", sa.Column("schedule", sa.String(), nullable=False))
+
+    op.drop_constraint("FK_plan_items", "plan_items", type_="foreignkey")
+    op.create_foreign_key("plan_items_plan_id_fkey", "plan_items", "user_plans", ["plan_id"], ["id"])
+
     op.drop_constraint("FK_User_Items", "log_items", type_="foreignkey")
-    op.drop_constraint("FK_User_logs", "log_items", type_="foreignkey")
+    op.drop_constraint("FK_user_logs", "log_items", type_="foreignkey")
     op.create_foreign_key("log_items_item_id_fkey", "log_items", "user_items", ["item_id"], ["id"])
     op.create_foreign_key("log_items_log_id_fkey", "log_items", "user_logs", ["log_id"], ["id"])
-    pass

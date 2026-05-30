@@ -134,7 +134,7 @@ class MealLogResponse(BaseModel):
 
 
 @router.get("/{user_id}", response_model=MealLogResponse)
-def get_meal_log(user_id: int, log_id: int = None, log_date:date = None, log_category:MealCategory=None):
+def get_meal_logs(user_id: int, log_id: int = None, log_date:date = None, log_category:MealCategory=None):
     metadata_obj = sqlalchemy.MetaData()
     log_items = sqlalchemy.Table("log_items", metadata_obj, autoload_with=db.engine)
     user_items = sqlalchemy.Table("user_items", metadata_obj, autoload_with=db.engine)
