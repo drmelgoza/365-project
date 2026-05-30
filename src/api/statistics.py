@@ -28,7 +28,7 @@ class MacroTotalResponse(BaseModel):
 
 
 @router.get("/{user_id}", response_model=None)
-def get_daily_summary(user_id: int, summary_date: date):
+def get_daily_summary(user_id: int, summary_date: date=date.today()):
     with db.engine.begin() as connection:
         result = connection.execute(
             sqlalchemy.text(
@@ -47,10 +47,10 @@ def get_daily_summary(user_id: int, summary_date: date):
         macro_totals = connection.execute(
             sqlalchemy.text(
                 """
-                SELECT sum(calories) as total_calories, 
-                       sum(protein) as total_protein, 
-                       sum(carbs) as total_carbs, 
-                       sum(fat) as total_fat
+                SELECT sum(calories * log_items.quantity) as total_calories, 
+                       sum(protein * log_items.quantity) as total_protein, 
+                       sum(carbs * log_items.quantity) as total_carbs, 
+                       sum(fat * log_items.quantity) as total_fat
                 FROM user_logs
                 JOIN log_items on log_items.log_id = user_logs.id
                 JOIN user_items on user_items.id = log_items.item_id
@@ -72,7 +72,7 @@ def get_daily_summary(user_id: int, summary_date: date):
             sqlalchemy.text(
                 """
                 SELECT nutrient, quantity, unit
-                FROM macro_goal
+                FROM user_goals
                 WHERE user_id = :user_id
                 """
             ),

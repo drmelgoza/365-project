@@ -22,7 +22,7 @@ def reset():
         connection.execute(
             sqlalchemy.text(
                 """
-                TRUNCATE users, user_items, user_logs, log_items, meal_plan, macro_goal
+                TRUNCATE users, user_items, user_logs, log_items, user_plans, user_goals, plan_items
                 RESTART IDENTITY CASCADE
                 """
             )

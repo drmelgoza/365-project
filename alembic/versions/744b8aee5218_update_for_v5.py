@@ -9,7 +9,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-
+from fastapi.datastructures import Default
 
 # revision identifiers, used by Alembic.
 revision: str = '744b8aee5218'
@@ -50,23 +50,37 @@ def upgrade() -> None:
 
     #remove "schedule" in place of "schedule type" and "days"; keeps the two info pieces separate
     #op.drop_column("user_plans", "schedule")
+    op.drop_column("user_plans", "schedule")
     op.add_column("user_plans", sa.Column("schedule_type", sa.String(), nullable=False))
     op.add_column("user_plans", sa.Column("days", sa.ARRAY(sa.String()), nullable=False))
 
-    #add optional quantity for meal plan items
+    #add quantity for meal plan and meal goal items
     #unlike macros, many ways to measure portions
     #keep this field as a string to allow for user customization for portioning
     #ex: "handful" of grapes or "1 cup" of grapes or "bunch" of grapes
-    op.add_column("plan_items", sa.Column("quantity_w_unit", sa.String, nullable=True))
+    op.add_column("plan_items", sa.Column("quantity", sa.Integer(), nullable=False))
+    op.add_column("plan_items", sa.Column("unit", sa.String(), nullable=False))
+    op.add_column("log_items", sa.Column("quantity", sa.Integer(), nullable=False))
+    op.add_column("log_items", sa.Column("unit", sa.String(), nullable=False))
 
     op.rename_table("macro_goal", "user_goals")
+
+    op.add_column("users", sa.Column("height_unit", sa.String(), nullable=False, default='ft/in'))
+    op.add_column("users", sa.Column("weight_unit", sa.String(), nullable=False, default='lbs'))
+
 
 
 def downgrade() -> None:
     """Downgrade schema."""
+    op.drop_column("users", "weight_unit")
+    op.drop_column("users", "height_unit")
+
     op.rename_table("user_goals", "macro_goal")
 
-    op.drop_column("plan_items", "quantity_w_unit")
+    op.drop_column("log_items", "quantity")
+    op.drop_column("log_items", "unit")
+    op.drop_column("plan_items", "quantity")
+    op.drop_column("plan_items", "unit")
 
     op.drop_column("user_plans", "schedule_type")
     op.drop_column("user_plans", "days")
@@ -83,7 +97,6 @@ def downgrade() -> None:
 
     op.drop_constraint("FK_user_id", "macro_goal", type_="foreignkey")
     op.create_foreign_key("macro_goal_user_id_fkey", "macro_goal", "users", ["user_id"], ["id"])
-
 
     op.drop_constraint("FK_plan_items", "plan_items", type_="foreignkey")
     op.create_foreign_key("plan_items_plan_id_fkey", "plan_items", "user_plans", ["plan_id"], ["id"])
