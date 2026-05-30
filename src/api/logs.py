@@ -7,7 +7,6 @@ from datetime import date
 from enum import Enum
 
 
-
 router = APIRouter(
     prefix="/logs",
     tags=["logs"],
@@ -59,11 +58,6 @@ class LogStatusResponse(BaseModel):
     status: str
 
 
-class ItemDeleteResponse(BaseModel):
-    status: str
-
-
-
 #meal log models
 #allowed meal categories
 class MealCategory(str, Enum):
@@ -84,26 +78,18 @@ class LogCreationResponse(BaseModel):
     log_id: int
 
 
-class LoggedItem(BaseModel):
-    name: str
-    calories: float = Field(ge=0)
-    protein: float = Field(ge=0)
-    carbs: float = Field(ge=0)
-    fat: float = Field(ge=0)
-
-
-class MealLogResponse(BaseModel):
-    category: str
-    date: date
-    items: list[LoggedItem]
-
-
 @router.post("/{user_id}", response_model=LogCreationResponse)
-def create_meal_log(user_id: int, info: LogInfo):
+def create_meal_log(user_id: int, log_date: date, category: MealCategory):
 
     valid_user = validate_user(user_id)
     if not valid_user:
         raise HTTPException(status_code=404, detail="User does not exist.")
+
+    if not log_date:
+        raise HTTPException(status_code=404, detail="Log must have a date.")
+
+    if not category:
+        raise HTTPException(status_code=404, detail="Category must be specified.")
 
     with db.engine.begin() as connection:
         result = connection.execute(
@@ -116,63 +102,120 @@ def create_meal_log(user_id: int, info: LogInfo):
             ),
             [{
                 "user_id": user_id,
-                "date": info.date,
-                "category": info.category.value,
+                "date": log_date,
+                "category": category.value
             }]
         ).one()
 
     return LogCreationResponse(log_id=result.id)
 
 
-@router.get("/{user_id}/{log_id}", response_model=MealLogResponse)
-def get_meal_log(user_id: int, log_id: int):
+class LoggedItem(BaseModel):
+    id: int
+    name: str
+    calories: float = Field(ge=0)
+    protein: float = Field(ge=0)
+    carbs: float = Field(ge=0)
+    fat: float = Field(ge=0)
+
+
+class LogsByCategory(BaseModel):
+    id_and_category: str
+    items: list[LoggedItem]
+
+
+class LogsByDay(BaseModel):
+    date: date
+    logs: list[LogsByCategory]
+
+
+class MealLogResponse(BaseModel):
+    results: list[LogsByDay]
+
+
+@router.get("/{user_id}", response_model=MealLogResponse)
+def get_meal_log(user_id: int, log_id: int = None, log_date:date = None, log_category:MealCategory=None):
+    metadata_obj = sqlalchemy.MetaData()
+    log_items = sqlalchemy.Table("log_items", metadata_obj, autoload_with=db.engine)
+    user_items = sqlalchemy.Table("user_items", metadata_obj, autoload_with=db.engine)
+    user_logs = sqlalchemy.Table("user_logs", metadata_obj, autoload_with=db.engine)
+
     valid_user = validate_user(user_id)
     if not valid_user:
         raise HTTPException(status_code=404, detail="User does not exist.")
 
+    query = (
+        sqlalchemy.select(
+        user_items.c.id.label("item_id"),
+        user_items.c.name.label("name"),
+        user_logs.c.date.label("date"),
+        sqlalchemy.func.concat("id ", user_logs.c.id, ": ", user_logs.c.category).label("category"),
+        user_items.c.calories.label("calories"),
+        user_items.c.protein.label("protein"),
+        user_items.c.carbs.label("carbs"),
+        user_items.c.fat.label("fat")
+        )
+        .join(log_items, log_items.c.item_id == user_items.c.id)
+        .join(user_logs, user_logs.c.id == log_items.c.log_id)
+        .order_by(user_logs.c.date.desc())
+    )
+
+    if log_id:
+        query = query.where(log_items.c.log_id == log_id)
+
+    if log_date:
+        query = query.where(user_logs.c.date == log_date)
+
+    if log_category:
+        query = query.where(user_logs.c.category == log_category)
+
     with db.engine.begin() as connection:
-        info_result = connection.execute(
-            sqlalchemy.text(
-                """
-                SELECT category, date
-                FROM user_logs
-                WHERE user_id = :user_id
-                AND id = :log_id
-                """
-            ),
-            [{"user_id": user_id, "log_id": log_id}]
-        ).one_or_none()
+        result = connection.execute(query).all()
 
-        if not info_result:
-            raise HTTPException(status_code=404, detail="Log not found.")
+        if not result:
+            raise HTTPException(status_code=404, detail="No logs not found.")
 
-        items_result = connection.execute(
-            sqlalchemy.text(
-                """
-                SELECT name, calories, protein, carbs, fat
-                FROM log_items
-                JOIN user_items ON user_items.id = log_items.item_id
-                WHERE log_items.log_id = :log_id 
-                """
-            ),
-            [{"log_id": log_id}]
-        ).all()
+        all_dates =[r.date for r in result]
 
-        items_list = [
-            LoggedItem(
-                name=itm.name,
-                calories=itm.calories,
-                protein=itm.protein,
-                carbs=itm.carbs,
-                fat=itm.fat,
+        all_categories = [r.category for r in result]
+
+        by_date_items = {log_date:
+                             {category: [] for category in all_categories}
+                         for log_date in all_dates}
+
+        for itm in result:
+            by_date_items[itm.date][itm.category].append(
+                LoggedItem(
+                    id=itm.item_id,
+                    name=itm.name,
+                    calories=itm.calories,
+                    protein=itm.protein,
+                    carbs=itm.carbs,
+                    fat=itm.fat
+                )
             )
-            for itm in items_result
-        ]
+
+        logs_list = []
+        for day in by_date_items:
+            logs = []
+            for category in by_date_items[day]:
+                if len(by_date_items[day][category]) > 0:
+                    logs.append(
+                        LogsByCategory(
+                            id_and_category=category,
+                            items = by_date_items[day][category]
+                        )
+                    )
+            logs_list.append(
+                LogsByDay(
+                    date=day,
+                    logs=logs)
+            )
+
+
 
         return MealLogResponse(
-            category=info_result.category,
-            date=info_result.date,
-            items=items_list,
+            results=logs_list,
         )
 
 
@@ -186,21 +229,16 @@ class LogUpdateResponse(BaseModel):
 
 @router.post("/{user_id}/{log_id}/items", response_model=LogUpdateResponse)
 def add_items_to_log(user_id: int, log_id: int, items: NewLogItems):
+    valid_user = validate_user(user_id)
+    if not valid_user:
+        raise HTTPException(status_code=404, detail="User does not exist.")
+
+    valid_log = validate_log(log_id)
+    if not valid_log:
+        raise HTTPException(status_code=404, detail="Log not found.")
+
     """Add one or more food items to an existing meal log."""
     with db.engine.begin() as connection:
-        log_exists = connection.execute(
-            sqlalchemy.text(
-                """
-                SELECT 1 
-                FROM user_logs 
-                WHERE id = :log_id AND user_id = :user_id
-                """
-            ),
-            {"log_id": log_id, "user_id": user_id}
-        ).one_or_none()
-
-        if not log_exists:
-            raise HTTPException(status_code=404, detail="Log not found.")
 
         existing_items = connection.execute(
             sqlalchemy.text(
@@ -238,23 +276,21 @@ def add_items_to_log(user_id: int, log_id: int, items: NewLogItems):
     return LogUpdateResponse(status="logged")
 
 
+class ItemDeleteResponse(BaseModel):
+    status: str
+
+
 @router.delete("/{user_id}/{log_id}/items/{item_id}", response_model=ItemDeleteResponse)
-def remove_items_from_log(user_id, log_id: int, item_id: int):
+def remove_item_from_log(user_id:int, log_id: int, item_id: int):
+    valid_user = validate_user(user_id)
+    if not valid_user:
+        raise HTTPException(status_code=404, detail="User does not exist.")
+
+    valid_log = validate_log(log_id)
+    if not valid_log:
+        raise HTTPException(status_code=404, detail="Log not found.")
+
     with db.engine.begin() as connection:
-        log_result = connection.execute(
-            sqlalchemy.text(
-                """
-                SELECT 1
-                FROM user_logs
-                WHERE id = :log_id
-                """
-            ),
-            [{"log_id": log_id}]
-        ).one_or_none()
-
-        if not log_result:
-            raise HTTPException(status_code=404, detail="Log does not exist.")
-
         result = connection.execute(
             sqlalchemy.text(
                 """
@@ -268,6 +304,6 @@ def remove_items_from_log(user_id, log_id: int, item_id: int):
 
         #return 404 if the item was never in this log
         if result.rowcount == 0:
-            raise HTTPException(status_code=404, detail="Item not found in this log.")
+            raise HTTPException(status_code=404, detail=f"Item {item_id} not found in this log.")
 
     return ItemDeleteResponse(status="deleted")

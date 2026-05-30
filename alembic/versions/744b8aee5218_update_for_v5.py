@@ -21,11 +21,15 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     """Upgrade schema."""
     op.drop_constraint("log_items_item_id_fkey", "log_items", type_="foreignkey")
+    op.drop_constraint("log_items_log_id_fkey", "log_items", type_="foreignkey")
     op.create_foreign_key("FK_User_Items", "log_items", "user_items",  ["item_id"], ["id"], ondelete="CASCADE")
+    op.create_foreign_key("FK_user_logs", "log_items", "user_logs", ["log_id"], ["id"], ondelete="CASCADE")
 
 
 def downgrade() -> None:
     """Downgrade schema."""
     op.drop_constraint("FK_User_Items", "log_items", type_="foreignkey")
+    op.drop_constraint("FK_User_logs", "log_items", type_="foreignkey")
     op.create_foreign_key("log_items_item_id_fkey", "log_items", "user_items", ["item_id"], ["id"])
+    op.create_foreign_key("log_items_log_id_fkey", "log_items", "user_logs", ["log_id"], ["id"])
     pass
