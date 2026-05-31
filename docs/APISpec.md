@@ -477,6 +477,8 @@ Weekly / custom example:
 
 Returns **all** meal plans for the user (not just the first one).
 
+> [!NOTE] This section (4.2) expected to change.
+
 ### Response `200`
 
 ```json
@@ -484,14 +486,16 @@ Returns **all** meal plans for the user (not just the first one).
   {
     "plan_id": 1,
     "user_id": 20,
-    "name": "Cutting Plan",
-    "schedule": "daily"
+    "plan_name": "Cutting Plan",
+    "schedule_type": "daily",
+    "items": ["..."]
   },
   {
     "plan_id": 2,
     "user_id": 20,
-    "name": "Gym Days",
-    "schedule": "weekly:monday,thursday,friday"
+    "plan_name": "Gym Days",
+    "schedule_type": "weekly:monday,thursday,friday",
+    "items": ["..."]
   }
 ]
 ```

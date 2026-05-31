@@ -36,12 +36,19 @@ class DayType(str, Enum):
     thursday = "thursday",
     friday = "friday"
 
+class UnitType(str, Enum):
+    gram = "g",
+    ounces = "oz",
+    tbsp = "tbsp",
+    serving = "serving"
+
 
 class MealPlanCreate(BaseModel):
     name: str
     schedule_type: ScheduleType
+    category: CategoryType
     # days is only relevant for weekly or custom schedules
-    days: Optional[list[str]] = None
+    days: Optional[list[DayType]] = None
 
 
 class MealPlanCreateResponse(BaseModel):
@@ -52,7 +59,8 @@ class MealPlanCreateResponse(BaseModel):
 
 class MealPlanAdd(BaseModel):
     item_id: int
-    category: str
+    quantity: int = 1
+    unit_type: UnitType
 
 
 class MealPlanAddResponse(BaseModel):
@@ -68,10 +76,12 @@ class UserPlanItem(BaseModel):
     protein: float
     carbs: float
     fat: float
+    quantity: int
 
 
 class UserPlansLogResponse(BaseModel):
     plan_id: int
+    user_id: int
     plan_name: str
     schedule_type: str
     days: list[str]
@@ -113,24 +123,20 @@ def create_meal_plan(user_id: int, new_plan: MealPlanCreate):
         if not user_result:
             raise HTTPException(status_code=404, detail="User does not exist.")
 
-        # encode days into schedule string if provided (e.g. "weekly:monday,thursday")
-        if new_plan.days:
-            schedule_str = f"{new_plan.schedule_type.value}:{','.join(new_plan.days)}"
-        else:
-            schedule_str = new_plan.schedule_type.value
-
         plan_result = conn.execute(
             sqlalchemy.text(
                 """
-                INSERT INTO user_plans (user_id, name, schedule)
-                VALUES (:user_id, :name, :schedule)
+                INSERT INTO user_plans (user_id, name, schedule_type, days, category)
+                VALUES (:user_id, :name, :schedule_type, :days, :category)
                 RETURNING id
                 """
             ),
             [{
                 "user_id": user_id,
                 "name": new_plan.name,
-                "schedule": schedule_str
+                "schedule_type": new_plan.schedule_type,
+                "days": new_plan.days,
+                "category": new_plan.category
             }]
         ).one()
 
@@ -189,14 +195,15 @@ def add_meal_to_plan(user_id: int, plan_id: int, new_item: MealPlanAdd):
         conn.execute(
             sqlalchemy.text(
                 """
-                INSERT INTO plan_items (plan_id, item_id, category)
-                VALUES (:plan_id, :item_id, :category)
+                INSERT INTO plan_items (plan_id, item_id, quantity, unit)
+                VALUES (:plan_id, :item_id, :quantity, :unit_type)
                 """
             ),
             [{
                 "plan_id": plan_id,
                 "item_id": new_item.item_id,
-                "category": new_item.category
+                "quantity": new_item.quantity,
+                "unit_type": new_item.unit_type
             }]
         )
 
@@ -233,6 +240,7 @@ def get_meal_plan(
         query = """
             SELECT DISTINCT
                 up.id,
+                up.user_id,
                 up.name,
                 up.schedule_type,
                 up.days,
@@ -275,7 +283,8 @@ def get_meal_plan(
                     ui.calories,
                     ui.protein,
                     ui.carbs,
-                    ui.fat
+                    ui.fat,
+                    pi.quantity
                 FROM plan_items pi
                 JOIN user_items ui ON pi.item_id = ui.id
                 WHERE pi.plan_id = ANY(:plan_ids)
@@ -295,6 +304,7 @@ def get_meal_plan(
 
             response.append(UserPlansLogResponse(
                 plan_id=plan.id,
+                user_id=plan.user_id,
                 plan_name=plan.name,
                 schedule_type=str(plan.schedule_type),
                 days=plan.days,
@@ -302,10 +312,11 @@ def get_meal_plan(
                 items=[
                     UserPlanItem(
                         name=r.name,
-                        calories=r.calories,
-                        protein=r.protein,
-                        carbs=r.carbs,
-                        fat=r.fat
+                        calories= round(r.calories * r.quantity, 2),
+                        protein= round(r.protein * r.quantity, 2),
+                        carbs= round(r.carbs * r.quantity, 2),
+                        fat= round(r.fat * r.quantity, 2),
+                        quantity=r.quantity
                     )
                     for r in items_by_plan[plan.id]
                 ]
@@ -317,7 +328,7 @@ def get_meal_plan(
 
 #add plan id
 @router.delete("/{user_id}/{plan_id}/items/{item_id}", response_model=UserPlansRemoveItemResponse)
-def remove_item_from_plan(user_id: int, item_id: int):
+def remove_item_from_plan(user_id: int, plan_id: int, item_id: int):
     with db.engine.begin() as conn:
         user_result = conn.execute(
             sqlalchemy.text(
@@ -333,6 +344,21 @@ def remove_item_from_plan(user_id: int, item_id: int):
         if not user_result:
             raise HTTPException(status_code=404, detail="User does not exist.")
 
+        plan_result = conn.execute(
+            sqlalchemy.text(
+                """
+                SELECT 1
+                FROM user_plans up
+                WHERE up.id = :plan_id AND up.user_id = :user_id
+                """
+            ),
+            {"plan_id": plan_id, "user_id": user_id}
+        ).one_or_none()
+
+        if not plan_result:
+            raise HTTPException(status_code=404, detail="Plan does not exist for this user.")
+
+        #TODO: Change ".all" to ".one_or_none()" after adding a check for duplicate items in meal plan
         item_result = conn.execute(
             sqlalchemy.text(
                 """
@@ -344,7 +370,7 @@ def remove_item_from_plan(user_id: int, item_id: int):
                 """
             ),
             [{"user_id": user_id, "item_id": item_id}]
-        ).one_or_none()
+        ).all()
 
         if not item_result:
             raise HTTPException(status_code=404, detail="Item does not exist in this user's plan.")
@@ -445,7 +471,7 @@ def compare_meal_plan(user_id: int):
         person = conn.execute(
             sqlalchemy.text(
                 """
-                SELECT id, name, schedule
+                SELECT id, name, schedule_type
                 FROM user_plans
                 WHERE user_id = :user_id
                 ORDER BY id
@@ -455,7 +481,7 @@ def compare_meal_plan(user_id: int):
         ).one_or_none()
 
         if not user_result:
-            raise HTTPException(status_code=404, detail="User does not exist in eser_plans.")
+            raise HTTPException(status_code=404, detail="User does not exist in user_plans.")
 
 
         same = conn.execute(
