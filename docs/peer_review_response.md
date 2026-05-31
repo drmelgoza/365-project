@@ -3,7 +3,8 @@
 > [!IMPORTANT] 
 > All new test cases in the [v3_manual_test_results.md](https://github.com/drmelgoza/365-project/blob/main/test/v3_manual_test_results.md) file
 
-# Revisions for feedback from Victor Wu (Issues 1-4):
+---
+# Revisions for Victor Wu's Feedback (Issues 1-4):
 
 ## New Test Case #1: Updating User Stats
 
@@ -31,6 +32,8 @@ that a majority of endpoints work as intended.
 12. The FastAPI website sections are now organized by resource. For consistency, all sections are organized in `POST`, `GET`, `PATCH`, `DELETE` order, with some endpoint types being omitted as needed.
 ---
 
+# Revisions for Iris Aeron's Feedback (Issues 5-8):
+
 ## New Test Case #1 (Iris Aeron): Negative Nutrition Values
 
 **_Feedback:_** We modified our code to now check for negative values, so this test was good to implement in order to
@@ -46,7 +49,23 @@ test invalid input for the date section when creating a meal log.
 **_Feedback:_** We chose not to implement duplicate prevention because allowing repeated item IDs can reasonably
 represent multiple servings of the same food item within a single meal log.
 
+## Schema/API Design Changes:
+1. `APISpec.md` and `ExampleFlows.md` have been edited to properly showcase the newest version of the API.
+2. All documentation now uses the term `user(s)` to represent the user entity.
+3. Macro goals have been implemented with `POST`, `GET`, `PATCH`, `DELETE` endpoints being added to manage the new resource. Now, meal logs can be aggregated by day to calculate daily macro goal progress. 
+4. The meal statistics functionality has been added with `GET users/{user_id}/statstics`. This endpoint allows users to see how their meal logs for a specific day compare to the macro goals they have set.
+5. Meal log dates are now recorded in a single ISO-date column called `date` in the `user_logs` table.
+6. Meal log time has been removed to avoid redundancy with the already established meal categories (Breakfast, Lunch, Dinner, etc.)
+7. Meal log categories have now been standardized to avoid inconsistent values that would complicate sorting and grouping. The established categories are `["breakfast", "lunch", "dinner", "snack", "supper"]` 
+8. User item macronutrients now are constrained to positive integer or float values.
+9. User health stats now include units for height and weight. Users have the option of inputting weight in `kg` or `lbs`, as well as the option of inputting height in `cm` or `ft/in` (For `ft/in` specifically, the user has the option to input `68` to represent 68", or `5'8"` to represent 68". `cm` only accepts a pure integer value)
+10. User age is now set as an `integer` column.
+11. Meal logs are now directly tied to users, now using the URI prefix `users/{user_id}/logs/`.
+12. Meal logs now accept a quantity for the Food Item being inputted. This means that Food Items are treated as a single unit, with the proper macronutrient totals being calculated by multiplying the unit value by the quantity listed.
+
 ---
+
+# Revisions for Sumedha Kundurthi's Feedback (Issues 9-12):
 
 ## New Test Case #1 (Sumedha Kundurthi): Invalid Time
 
