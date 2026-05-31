@@ -1,6 +1,7 @@
 from enum import Enum
-from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException
+from collections import defaultdict
+from typing import Optional, Any
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 import sqlalchemy
 from src.api import auth
@@ -20,6 +21,20 @@ class ScheduleType(str, Enum):
     daily = "daily"
     weekly = "weekly"
     custom = "custom"
+
+class CategoryType(str, Enum):
+    breakfast = "breakfast",
+    lunch = "lunch",
+    dinner = "dinner",
+    snack = "snack",
+    supper = "supper"
+
+class DayType(str, Enum):
+    monday = "monday",
+    tuesday = "tuesday",
+    wednesday = "wednesday",
+    thursday = "thursday",
+    friday = "friday"
 
 
 class MealPlanCreate(BaseModel):
@@ -57,7 +72,8 @@ class UserPlanItem(BaseModel):
 
 class UserPlansLogResponse(BaseModel):
     plan_name: str
-    schedule: str
+    schedule_type: str
+    days: list[str]
     items: list[UserPlanItem]
 
 
@@ -203,7 +219,11 @@ def add_meal_to_plan(user_id: int, plan_id: int, new_item: MealPlanAdd):
 
 
 @router.get("/{user_id}/plan", response_model=list[UserPlansLogResponse])
-def get_meal_plan(user_id: int):
+def get_meal_plan(
+        user_id: int,
+        category: list[CategoryType] | None = Query(None),
+        days: list[DayType] | None = Query(None)
+):
     """Return all plans for the user instead of just the first one."""
     with db.engine.connect() as conn:
         user_result = conn.execute(
@@ -220,45 +240,72 @@ def get_meal_plan(user_id: int):
         if not user_result:
             raise HTTPException(status_code=404, detail="User does not exist.")
 
+        query = """
+            SELECT DISTINCT
+                up.id,
+                up.name,
+                up.schedule_type,
+                up.days
+            FROM user_plans up
+            JOIN plan_items pi ON pi.plan_id = up.id
+            WHERE up.user_id = :user_id
+        """
+
+        params: dict[str, Any] = {"user_id": user_id}
+
+        if category:
+            query += """ 
+                AND pi.category = ANY(:categories)
+            """
+            params["categories"] = [c.value for c in category]
+
+        if days:
+            query += """ 
+                AND up.days && :days
+            """
+            params["days"] = [d.value for d in days]
+
         plans = conn.execute(
-            sqlalchemy.text(
-                """
-                SELECT id, name, schedule
-                FROM user_plans
-                WHERE user_id = :user_id
-                ORDER BY id
-                """
-            ),
-            [{"user_id": user_id}]
+            sqlalchemy.text(query),
+            params
         ).all()
 
-        if not plans:
-            raise HTTPException(status_code=404, detail="User has no plans.")
+        plan_ids = [plan.id for plan in plans]
+
+        if not plan_ids:
+            return []
+
+        items_result = conn.execute(
+            sqlalchemy.text(
+                """
+                SELECT
+                    pi.plan_id,
+                    ui.name,
+                    ui.calories,
+                    ui.protein,
+                    ui.carbs,
+                    ui.fat
+                FROM plan_items pi
+                JOIN user_items ui ON pi.item_id = ui.id
+                WHERE pi.plan_id = ANY(:plan_ids)
+                """
+            ),
+            {"plan_ids": plan_ids}
+        ).all()
 
         response = []
 
-        # TODO: Change this part to have all columns queried first and then the loop can loop through them after
+        items_by_plan = defaultdict(list)
+
+        for row in items_result:
+            items_by_plan[row.plan_id].append(row)
+
         for plan in plans:
-            items_result = conn.execute(
-                sqlalchemy.text(
-                    """
-                    SELECT
-                        ui.name,
-                        ui.calories,
-                        ui.protein,
-                        ui.carbs,
-                        ui.fat
-                    FROM plan_items pi
-                    JOIN user_items ui ON pi.item_id = ui.id
-                    WHERE pi.plan_id = :plan_id
-                    """
-                ),
-                [{"plan_id": plan.id}]
-            ).all()
 
             response.append(UserPlansLogResponse(
                 plan_name=plan.name,
-                schedule=str(plan.schedule),
+                schedule_type=str(plan.schedule_type),
+                days=plan.days,
                 items=[
                     UserPlanItem(
                         name=r.name,
@@ -267,131 +314,13 @@ def get_meal_plan(user_id: int):
                         carbs=r.carbs,
                         fat=r.fat
                     )
-                    for r in items_result
+                    for r in items_by_plan[plan.id]
                 ]
             ))
 
     return response
 
 
-@router.get("/{user_id}/plan/category", response_model=UserPlansCategoryLogResponse)
-def get_meal_plan_by_category(user_id: int, category: str):
-    with db.engine.connect() as conn:
-        user_result = conn.execute(
-            sqlalchemy.text(
-                """
-                SELECT 1
-                FROM users
-                WHERE id = :user_id
-                """
-            ),
-            [{"user_id": user_id}]
-        ).one_or_none()
-
-        if not user_result:
-            raise HTTPException(status_code=404, detail="User does not exist.")
-
-        results = conn.execute(
-            sqlalchemy.text(
-                """
-                SELECT
-                    up.schedule,
-                    pi.category,
-                    ui.name,
-                    ui.calories,
-                    ui.protein,
-                    ui.carbs,
-                    ui.fat
-                FROM plan_items pi
-                JOIN user_plans up ON pi.plan_id = up.id
-                JOIN user_items ui ON pi.item_id = ui.id
-                WHERE up.user_id = :user_id
-                AND pi.category = :category
-                """
-            ),
-            [{"user_id": user_id, "category": category}]
-        ).all()
-
-        if not results:
-            raise HTTPException(status_code=404, detail="No plans found for this category.")
-
-    items = [
-        UserPlanItem(
-            name=r.name,
-            calories=r.calories,
-            protein=r.protein,
-            carbs=r.carbs,
-            fat=r.fat
-        )
-        for r in results
-    ]
-
-    first = results[0]
-    return UserPlansCategoryLogResponse(
-        category=first.category,
-        schedule=str(first.schedule),
-        items=items
-    )
-
-
-@router.get("/{user_id}/plan/day", response_model=UserPlansDayResponse)
-def get_meal_plan_by_day(user_id: int, plan_name: str):
-    with db.engine.connect() as conn:
-        user_result = conn.execute(
-            sqlalchemy.text(
-                """
-                SELECT 1
-                FROM users
-                WHERE id = :user_id
-                """
-            ),
-            [{"user_id": user_id}]
-        ).one_or_none()
-
-        if not user_result:
-            raise HTTPException(status_code=404, detail="User does not exist.")
-
-        results = conn.execute(
-            sqlalchemy.text(
-                """
-                SELECT
-                    up.name AS plan_name,
-                    up.schedule,
-                    ui.name,
-                    ui.calories,
-                    ui.protein,
-                    ui.carbs,
-                    ui.fat
-                FROM plan_items pi
-                JOIN user_plans up ON pi.plan_id = up.id
-                JOIN user_items ui ON pi.item_id = ui.id
-                WHERE up.user_id = :user_id
-                AND up.name = :plan_name
-                """
-            ),
-            [{"user_id": user_id, "plan_name": plan_name}]
-        ).all()
-
-        if not results:
-            raise HTTPException(status_code=404, detail="No plans found with this name.")
-
-    items = [
-        UserPlanItem(
-            name=r.name,
-            calories=r.calories,
-            protein=r.protein,
-            carbs=r.carbs,
-            fat=r.fat
-        )
-        for r in results
-    ]
-
-    first = results[0]
-    return UserPlansDayResponse(
-        plan_name=first.plan_name,
-        schedule=str(first.schedule),
-        items=items
-    )
 
 #add plan id
 @router.delete("/{user_id}/{plan_id}/items/{item_id}", response_model=UserPlansRemoveItemResponse)
