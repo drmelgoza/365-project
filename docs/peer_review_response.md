@@ -18,7 +18,7 @@ test that a user's stats were updating correctly.
 that a majority of endpoints work as intended.
 
 ## Schema/API Design Changes:
-1. Meal Log dates are now recorded in a single ISO-date column called `date` in the `user_logs` table.
+1. Meal Log dates are now recorded in a single date column called `date` in the `user_logs` table.
 2. Meal plans and Meal logs now implement quantities. The macronutrient counts in the `user_items` table are considered to be for a single serving, and serving size can be adjusted when adding the item to a meal log or meal plan.
 3. Constraints are now placed on numeric values (user health info, food item macronutrient info). Date and email values are properly constrained, and macronutrient and plan types only use a set of acceptable values.
 4. (Insert here when plans are updated)
@@ -34,17 +34,17 @@ that a majority of endpoints work as intended.
 
 # Revisions for Iris Aeron's Feedback (Issues 5-8):
 
-## New Test Case #1 (Iris Aeron): Negative Nutrition Values
+## New Test Case #1: Negative Nutrition Values
 
 **_Feedback:_** We modified our code to now check for negative values, so this test was good to implement in order to
 prevent any negative values from being logged into the database.
 
-## New Test Case #2 (Iris Aeron): Invalid Meal Log Date
+## New Test Case #2: Invalid Meal Log Date
 
 **_Feedback:_** This test case was implemented and was a good test case to implement because it helped
 test invalid input for the date section when creating a meal log.
 
-## New Test Case #3 (Iris Aeron): Duplicate Item in the Same Log
+## New Test Case #3: Duplicate Item in the Same Log
 
 **_Feedback:_** We chose not to implement duplicate prevention because allowing repeated item IDs can reasonably
 represent multiple servings of the same food item within a single meal log.
@@ -54,7 +54,7 @@ represent multiple servings of the same food item within a single meal log.
 2. All documentation now uses the term `user(s)` to represent the user entity.
 3. Macro goals have been implemented with `POST`, `GET`, `PATCH`, `DELETE` endpoints being added to manage the new resource. Now, meal logs can be aggregated by day to calculate daily macro goal progress. 
 4. The meal statistics functionality has been added with `GET users/{user_id}/statstics`. This endpoint allows users to see how their meal logs for a specific day compare to the macro goals they have set.
-5. Meal log dates are now recorded in a single ISO-date column called `date` in the `user_logs` table.
+5. Meal log dates are now recorded in a single date column called `date` in the `user_logs` table.
 6. Meal log time has been removed to avoid redundancy with the already established meal categories (Breakfast, Lunch, Dinner, etc.)
 7. Meal log categories have now been standardized to avoid inconsistent values that would complicate sorting and grouping. The established categories are `["breakfast", "lunch", "dinner", "snack", "supper"]` 
 8. User item macronutrients now are constrained to positive integer or float values.
@@ -67,11 +67,25 @@ represent multiple servings of the same food item within a single meal log.
 
 # Revisions for Sumedha Kundurthi's Feedback (Issues 9-12):
 
-## New Test Case #1 (Sumedha Kundurthi): Invalid Time
+## New Test Case #1: Invalid Time
 
 **_Feedback:_** This test case is similar to a previous test case, so it was omitted.
 
-## New Test Case #2 (Sumedha Kundurthi): Delete non-existent item
+## New Test Case #2: Delete non-existent item
 
 **_Feedback:_** We implemented this test case because checking whether an item exists before deletion helps prevent
 invalid operations from being performed on non-existent entries in the database.
+
+## Schema/API Design Changes:
+1. `APISpec.md` now references the `/users` set of endpoints,  and any references to `/agendas` have been deleted.
+2. `APISpec.md` now consistently uses snake case.
+3. `PATCH` endpoints are now properly referenced in `APISpec.md`
+4. `PATCH` endpoints now return information about the values being changed for the specified resource.
+5. `DELETE` endpoints now return the id of the resource that was deleted.
+6. timestamps have been removed from the API, and all dates are now stored in one YYYY-MM-DD formatted column.
+7. (Address idempotency here)
+8. Logs are now consistently nested under the URI prefix `users/{user_id}/logs`.
+9. (Address GET plan endpoints here)
+10. Food items are made and stored in a personal directory using the `POST users/{user_id}/items` endpoint. They can be later referenced as part of meal logs or meal plans using other endpoints. This prevents users from having to repeat information for the same food item across multiple plans or logs.
+11. (Address when plans are updated here)
+12. (Address when plans are updated here)
