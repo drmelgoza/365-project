@@ -71,21 +71,11 @@ class UserPlanItem(BaseModel):
 
 
 class UserPlansLogResponse(BaseModel):
+    plan_id: int
     plan_name: str
     schedule_type: str
     days: list[str]
-    items: list[UserPlanItem]
-
-
-class UserPlansCategoryLogResponse(BaseModel):
-    category: str
-    schedule: str
-    items: list[UserPlanItem]
-
-
-class UserPlansDayResponse(BaseModel):
-    plan_name: str
-    schedule: str
+    category: CategoryType
     items: list[UserPlanItem]
 
 
@@ -245,7 +235,8 @@ def get_meal_plan(
                 up.id,
                 up.name,
                 up.schedule_type,
-                up.days
+                up.days,
+                up.category
             FROM user_plans up
             JOIN plan_items pi ON pi.plan_id = up.id
             WHERE up.user_id = :user_id
@@ -255,7 +246,7 @@ def get_meal_plan(
 
         if category:
             query += """ 
-                AND pi.category = ANY(:categories)
+                AND up.category = ANY(:categories)
             """
             params["categories"] = [c.value for c in category]
 
@@ -303,9 +294,11 @@ def get_meal_plan(
         for plan in plans:
 
             response.append(UserPlansLogResponse(
+                plan_id=plan.id,
                 plan_name=plan.name,
                 schedule_type=str(plan.schedule_type),
                 days=plan.days,
+                category=plan.category,
                 items=[
                     UserPlanItem(
                         name=r.name,

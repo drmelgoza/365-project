@@ -7,7 +7,7 @@ from datetime import date, timedelta
 import random
 
 def database_connection_url():
-    dotenv.load_dotenv()
+    dotenv.load_dotenv("default.env")
     return os.environ.get("POSTGRES_URI")
 
 # Create a new DB engine based on our connection string
@@ -123,6 +123,7 @@ with engine.begin() as conn:
                 "name": name,
                 "schedule_type": stype,
                 "days": days,
+                "category": random.choice(meal_categories),
             })
 
     if all_items:
@@ -161,8 +162,8 @@ with engine.begin() as conn:
 
     if all_plans:
         conn.execute(sqlalchemy.text("""
-            INSERT INTO user_plans (user_id, name, schedule_type, days)
-            VALUES (:user_id, :name, :schedule_type, :days);
+            INSERT INTO user_plans (user_id, name, schedule_type, days, category)
+            VALUES (:user_id, :name, :schedule_type, :days, :category);
         """), all_plans)
         result = conn.execute(sqlalchemy.text("SELECT id, user_id FROM user_plans"))
         for plan_id, uid in result:
@@ -173,7 +174,6 @@ with engine.begin() as conn:
                 all_plan_items.append({
                     "plan_id": plan_id,
                     "item_id": item_id,
-                    "category": random.choice(meal_categories),
                     "quantity": random.randint(1, 3),
                     "unit": random.choice(units),
                 })
@@ -181,8 +181,8 @@ with engine.begin() as conn:
 
     if all_plan_items:
         conn.execute(sqlalchemy.text("""
-            INSERT INTO plan_items (plan_id, item_id, category, quantity, unit)
-            VALUES (:plan_id, :item_id, :category, :quantity, :unit);
+            INSERT INTO plan_items (plan_id, item_id, quantity, unit)
+            VALUES (:plan_id, :item_id, :quantity, :unit);
         """), all_plan_items)
 
     print("total users: ", num_users)
