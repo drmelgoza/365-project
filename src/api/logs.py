@@ -311,6 +311,9 @@ def add_item_to_log(user_id: int, log_id: int, item_id: int, quantity: int = 1, 
 
 
 class ItemDeleteResponse(BaseModel):
+    user_id: int
+    log_id: int
+    item_id: int
     status: str
 
 
@@ -340,4 +343,4 @@ def remove_item_from_log(user_id:int, log_id: int, item_id: int):
         if result.rowcount == 0:
             raise HTTPException(status_code=404, detail=f"Item {item_id} not found in this log.")
 
-    return ItemDeleteResponse(status="deleted")
+    return ItemDeleteResponse(user_id=user_id, log_id=log_id, item_id=item_id, status="deleted")
