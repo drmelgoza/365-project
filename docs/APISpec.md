@@ -477,7 +477,8 @@ Weekly / custom example:
 
 Returns **all** meal plans for the user (not just the first one).
 
-> [!NOTE] This section (4.2) expected to change.
+> [!NOTE] 
+> This section (4.2) expected to change.
 
 ### Response `200`
 
