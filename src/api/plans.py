@@ -110,18 +110,11 @@ class UserPlansRemovePlanResponse(BaseModel):
     plan_id: int
     status: str
 
-<<<<<<< HEAD
-
 class UserMacro(BaseModel):
     name: str
     type: float
 
 
-=======
-class SamePlanResponse(BaseModel):
-    user_name: str
-    user_email: str
->>>>>>> cba04238694a0b4ca471a505317bd307b2b6d0de
     
 
 
