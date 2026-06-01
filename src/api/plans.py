@@ -239,8 +239,9 @@ def add_meal_to_plan(user_id: int, plan_id: int, new_item: MealPlanAdd):
 @router.get("/{user_id}/plan", response_model=list[UserPlansLogResponse])
 def get_meal_plan(
         user_id: int,
-        category: list[CategoryType] | None = Query(None),
-        days: list[DayType] | None = Query(None)
+        plan_id: int = None,
+        category: list[CategoryType] = Query(None),
+        days: list[DayType] = Query(None)
 ):
     """Return all plans for the user instead of just the first one."""
     with db.engine.connect() as conn:
@@ -272,6 +273,12 @@ def get_meal_plan(
         """
 
         params: dict[str, Any] = {"user_id": user_id}
+
+        if plan_id:
+            query += """ 
+                AND up.id = :plan_id
+            """
+            params["plan_id"] = plan_id
 
         if category:
             query += """ 
