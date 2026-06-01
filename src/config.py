@@ -3,7 +3,7 @@ import os
 from functools import lru_cache
 
 # Load default first
-load_dotenv(dotenv_path="default.env", override=False)
+load_dotenv(dotenv_path=".env", override=False)
 
 # Then override with .env if available
 load_dotenv(dotenv_path=find_dotenv(".env"), override=True)
