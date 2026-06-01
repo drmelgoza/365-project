@@ -6,6 +6,18 @@ import sqlalchemy
 from src.api import auth
 from src import database as db
 
+class Macro(str, Enum):
+    OPTION_1 = "protien"
+    OPTION_2 = "carbs"
+    OPTION_3 = "fats"
+
+
+class Category(str, Enum):
+    OPTION_1 = "breakfast"
+    OPTION_2 = "lunch"
+    OPTION_3 = "dinner"
+    OPTION_4 = "snack"
+ 
 
 router = APIRouter(
     prefix="/plans",
@@ -82,9 +94,12 @@ class UserPlansRemovePlanResponse(BaseModel):
     plan_id: int
     status: str
 
-class SameplanResponse(BaseModel):
-    user_name: str
-    user_emal: str
+
+class UserMacro(BaseModel):
+    name: str
+    type: float
+
+
     
 
 
@@ -500,10 +515,9 @@ def remove_plan(user_id: int, plan_id: int):
 ###DAVID WORK
 ###ADDED an API that matches a person with other people who share the same meal_plan 
 
-@router.get("/{user_id}/plan", response_model=list[SameplanResponse])
-def compare_meal_plan(user_id: int):
-    """Return all plans for the user instead of just the first one."""
-    with db.engine.connect() as conn:
+@router.get("/{user_id}/plan", response_model=list[UserMacro])
+def item_tracker_per_category(user_id: int, macro: Macro, category: Category): 
+    with db.engine.begin() as conn:
         user_result = conn.execute(
             sqlalchemy.text(
                 """
@@ -517,47 +531,35 @@ def compare_meal_plan(user_id: int):
 
         if not user_result:
             raise HTTPException(status_code=404, detail="User does not exist.")
-
     
-
-        person = conn.execute(
+        tracker = conn.execute(
             sqlalchemy.text(
+                f"""
+                select  user_items.user_id, name, {macro} as type
+                form user_items
+                JOIN log_items
+                ON user_items.id = log_items.item_id
+                Join user_logs
+                On user_items.user_id = user_logs.user_id and user_logs.id = log_items.log_id
+                WHERE user_id = :user_id and user_logs.category = :category
                 """
-                SELECT id, name, schedule
-                FROM user_plans
-                WHERE user_id = :user_id
-                ORDER BY id
-                """
+
             ),
-            [{"user_id": user_id}]
-        ).one_or_none()
+            {"user_id": user_id,
+             "category": category}
 
-        if not user_result:
-            raise HTTPException(status_code=404, detail="User does not exist in eser_plans.")
-
-
-        same = conn.execute(
-            sqlalchemy.text(
-                """
-                SELECT user.name, user.email
-                FROM user_plans
-                JOIN users
-                ON user.id = user_plans.user_id
-                WHERE user_plans.schedule = :schedule
-                ORDER BY id
-                """
-            ),
-            [{"schedule": person.schedule}]
         ).all()
 
-        print(f"Perosn with id {user_id} has the same plan as the following people")
-        list_of_people = []
-        for p in same:
-            list_of_people.append(SameplanResponse(
-                user_name = p.name,
-                user_email = p.email
+        list_of_macro = []
+        for item in tracker:
+            food = UserMacro(
+                name= item.name,
+                type= item.type
             )
-            )
+            list_of_macro.append(food)
         
-
-    return list_of_people
+        return list_of_macro
+        
+        
+        
+    
