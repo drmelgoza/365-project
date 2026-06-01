@@ -8,16 +8,23 @@ from src.api import auth
 from src import database as db
 
 class Macro(str, Enum):
-    OPTION_1 = "protien"
-    OPTION_2 = "carbs"
-    OPTION_3 = "fats"
+    protein = "protein"
+    carbs = "carbs"
+    fasts = "fats"
+
+    def __str__(self):
+        return self.value
 
 
 class Category(str, Enum):
-    OPTION_1 = "breakfast"
-    OPTION_2 = "lunch"
-    OPTION_3 = "dinner"
-    OPTION_4 = "snack"
+    breakfast = "breakfast"
+    lunch = "lunch"
+    dinner = "dinner"
+    snack = "snack"
+    supper = "supper"
+
+    def __str__(self):
+        return self.value
  
 
 router = APIRouter(
@@ -462,7 +469,7 @@ def remove_plan(user_id: int, plan_id: int):
 ###DAVID WORK
 ###ADDED an API that matches a person with other people who share the same meal_plan 
 
-@router.get("/{user_id}/plan", response_model=list[UserMacro])
+@router.get("/{user_id}/item_per_category", response_model=list[UserMacro])
 def item_tracker_per_category(user_id: int, macro: Macro, category: Category): 
     with db.engine.begin() as conn:
         user_result = conn.execute(
@@ -478,22 +485,28 @@ def item_tracker_per_category(user_id: int, macro: Macro, category: Category):
 
         if not user_result:
             raise HTTPException(status_code=404, detail="User does not exist.")
+        
+        mac = str(macro)
+        print (mac)
+
+        cat = str(category)
+        print (cat)
     
         tracker = conn.execute(
             sqlalchemy.text(
                 f"""
-                select  user_items.user_id, name, {macro} as type
-                form user_items
+                select  user_items.user_id, name, {mac} as type
+                from user_items
                 JOIN log_items
                 ON user_items.id = log_items.item_id
                 Join user_logs
                 On user_items.user_id = user_logs.user_id and user_logs.id = log_items.log_id
-                WHERE user_id = :user_id and user_logs.category = :category
+                WHERE user_items.user_id = :user_id and user_logs.category = :category
                 """
 
             ),
             {"user_id": user_id,
-             "category": category}
+             "category": cat}
         ).all()
 
         list_of_macro = []
