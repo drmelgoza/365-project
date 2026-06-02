@@ -144,6 +144,13 @@ def create_meal_plan(user_id: int, new_plan: MealPlanCreate):
         if not user_result:
             raise HTTPException(status_code=404, detail="User does not exist.")
 
+        if new_plan.schedule_type.value == "custom" or new_plan.schedule_type.value == "weekly":
+            if new_plan.days is None or new_plan.days == []:
+                raise HTTPException(status_code=404, detail="No days specified.")
+        else:
+            if new_plan.days != [] and len(new_plan.days) !=  5:
+                raise HTTPException(status_code=422, detail="Daily selection requires all days or none.")
+
         plan_result = conn.execute(
             sqlalchemy.text(
                 """
