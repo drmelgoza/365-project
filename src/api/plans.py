@@ -275,7 +275,7 @@ def get_meal_plan(
                 up.days,
                 up.category
             FROM user_plans up
-            JOIN plan_items pi ON pi.plan_id = up.id
+            LEFT JOIN plan_items pi ON pi.plan_id = up.id
             WHERE up.user_id = :user_id
         """
 
