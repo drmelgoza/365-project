@@ -47,19 +47,20 @@ def validate_goal(user_id: int, goal: str) -> bool:
 
 
 # macro_goal_models
-class NutrientCategory(str, Enum):
+class GoalCategory(str, Enum):
     protein = "protein"
     carbs = "carbs"
     fats = "fats"
     calories = "calories"
 
-class GoalCreateResponse(BaseModel):
+class MacroGoalResponse(BaseModel):
     user_id: int
+    goal: str
     status: str
 
 
-@router.post("/{user_id}/goals", response_model=GoalCreateResponse)
-def add_macro_goal(user_id: int, nutrient:NutrientCategory, quantity: int = 1):
+@router.post("/{user_id}/goals", response_model=MacroGoalResponse)
+def add_macro_goal(user_id: int, nutrient:GoalCategory, quantity: int = 1):
 
     valid_user = validate_user(user_id)
     if not valid_user:
@@ -85,9 +86,9 @@ def add_macro_goal(user_id: int, nutrient:NutrientCategory, quantity: int = 1):
         ).one_or_none()
 
         if search_result:
-            return GoalCreateResponse(user_id=user_id, status="goal already exists.")
+            return MacroGoalResponse(user_id=user_id, goal=nutrient, status="goal already exists.")
 
-        unit = "g" if nutrient is not NutrientCategory.calories else "kcal"
+        unit = "g" if nutrient is not GoalCategory.calories else "kcal"
 
         result = connection.execute(
             sqlalchemy.text(
@@ -107,7 +108,7 @@ def add_macro_goal(user_id: int, nutrient:NutrientCategory, quantity: int = 1):
 
         status = "created" if result else "error; please try again."
 
-        return GoalCreateResponse(user_id=user_id, status=status)
+        return MacroGoalResponse(user_id=user_id, goal=nutrient, status=status)
 
 
 # get_macro_goals models
@@ -116,12 +117,12 @@ class MacroGoal(BaseModel):
     quantity: int
     unit: str
 
-class MacroGoalResponse(BaseModel):
+class GetGoalsResponse(BaseModel):
     user_id: int
     goals: list[MacroGoal]
 
 
-@router.get("/{user_id}/goals", response_model=MacroGoalResponse)
+@router.get("/{user_id}/goals", response_model=GetGoalsResponse)
 def get_macro_goals(user_id: int):
     valid_user = validate_user(user_id)
     if not valid_user:
@@ -147,14 +148,7 @@ def get_macro_goals(user_id: int):
                 MacroGoal(nutrient=row.nutrient, quantity=row.quantity, unit=row.unit)
             )
 
-        return MacroGoalResponse(user_id=user_id, goals=goals)
-
-
-class GoalCategory(str, Enum):
-    protein = "protein"
-    carbs = "carbs"
-    fats = "fats"
-    calories = "calories"
+        return GetGoalsResponse(user_id=user_id, goals=goals)
 
 
 class GoalUpdateResponse(BaseModel):
@@ -197,13 +191,7 @@ def update_macro_goal(user_id: int, goal: GoalCategory, quantity: int = 1):
         return GoalUpdateResponse(user_id=user_id, category=goal, new_value= quantity, status=status)
 
 
-
-class GoalDeleteResponse(BaseModel):
-    user_id: int
-    goal: GoalCategory
-    status: str
-
-@router.delete("/{user_id}/goals/{goal}", response_model=GoalDeleteResponse)
+@router.delete("/{user_id}/goals/{goal}", response_model=MacroGoalResponse)
 def delete_goal(user_id: int, goal: GoalCategory):
     valid_user = validate_user(user_id)
     if not valid_user:
@@ -230,5 +218,5 @@ def delete_goal(user_id: int, goal: GoalCategory):
         ).one_or_none()
 
         status = "deleted" if result else "error; please try again."
-        return GoalDeleteResponse(user_id=user_id, goal=goal, status=status)
+        return MacroGoalResponse(user_id=user_id, goal=goal, status=status)
 

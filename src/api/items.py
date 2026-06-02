@@ -10,6 +10,8 @@ router = APIRouter(
     dependencies=[Depends(auth.get_api_key)],
 )
 
+#helper functions
+
 def validate_user(user_id: int) -> bool:
     with db.engine.begin() as connection:
         user_result = connection.execute(
@@ -53,13 +55,13 @@ class FoodItem(BaseModel):
     fat: float = Field(ge=0)
 
 
-class ItemCreateResponse(BaseModel):
+class ItemResponse(BaseModel):
     item_id: int
     user_id: int
     status: str
 
 
-@router.post("/{user_id}/items", response_model=ItemCreateResponse)
+@router.post("/{user_id}/items", response_model=ItemResponse)
 def add_food_item(user_id: int, new_item: FoodItem):
 
     valid_user = validate_user(user_id)
@@ -98,7 +100,8 @@ def add_food_item(user_id: int, new_item: FoodItem):
 
         status = "created" if item_result else "error; please try again"
 
-    return ItemCreateResponse(user_id=user_id, item_id=item_result.id, status=status)
+    return ItemResponse(user_id=user_id, item_id=item_result.id, status=status)
+
 
 class GetFoodItem(BaseModel):
     id: int
@@ -108,6 +111,7 @@ class GetFoodItem(BaseModel):
     protein: float = Field(ge=0)
     carbs: float = Field(ge=0)
     fat: float = Field(ge=0)
+
 
 class ItemGetResponse(BaseModel):
     user_id: int
@@ -149,8 +153,8 @@ def get_food_items(user_id: int):
         return ItemGetResponse(user_id=user_id, items=items)
 
 class ItemPatchResponse(BaseModel):
-    user_id: int
     item_id: int
+    user_id: int
     changed_values: dict[str, float]
     status: str
 
@@ -223,12 +227,8 @@ def update_food_item(
 
     return ItemPatchResponse(user_id=user_id, item_id=item_id, changed_values=changed_values, status=status)
 
-class ItemDeleteResponse(BaseModel):
-    user_id: int
-    item_id: int
-    status: str
 
-@router.delete("/{user_id}/items/{item_id}", response_model=ItemDeleteResponse)
+@router.delete("/{user_id}/items/{item_id}", response_model=ItemResponse)
 def delete_food_item(user_id: int, item_id: int):
     valid_user = validate_user(user_id)
     if not valid_user:
@@ -256,4 +256,4 @@ def delete_food_item(user_id: int, item_id: int):
 
         status = "deleted" if result else "error; please try again"
 
-        return ItemDeleteResponse(user_id=user_id, item_id=item_id, status=status)
+        return ItemResponse(user_id=user_id, item_id=item_id, status=status)
