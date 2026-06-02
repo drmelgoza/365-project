@@ -21,7 +21,9 @@ def validate_user(user_id: int) -> bool:
                 WHERE id = :user_id
                 """
             ),
-            [{"user_id": user_id}]
+            {
+                "user_id": user_id
+            }
         ).one_or_none()
 
         return True if user_result else False
@@ -37,10 +39,10 @@ def validate_goal(user_id: int, goal: str) -> bool:
                   AND nutrient = :goal
                 """
             ),
-            [{
+            {
                 "user_id": user_id,
                 "goal": goal
-            }]
+            }
         ).one_or_none()
 
         return True if goal_result else False
@@ -79,10 +81,10 @@ def add_macro_goal(user_id: int, nutrient:GoalCategory, quantity: int = 1):
                 AND nutrient = :nutrient
                 """
             ),
-            [{
+            {
                 "user_id": user_id,
                 "nutrient": nutrient,
-            }]
+            }
         ).one_or_none()
 
         if search_result:
@@ -98,12 +100,12 @@ def add_macro_goal(user_id: int, nutrient:GoalCategory, quantity: int = 1):
                 RETURNING id
                 """
             ),
-            [{
+            {
                 "user_id": user_id,
                 "nutrient": nutrient,
                 "quantity": quantity,
                 "unit": unit
-            }]
+            }
         ).one_or_none()
 
         status = "created" if result else "error; please try again."
@@ -137,9 +139,9 @@ def get_macro_goals(user_id: int):
                 WHERE user_id = :user_id
                 """
             ),
-            [{
+            {
                 "user_id": user_id
-            }]
+            }
         ).all()
 
         goals = []
@@ -179,11 +181,11 @@ def update_macro_goal(user_id: int, goal: GoalCategory, quantity: int = 1):
                 RETURNING 1
                 """
             ),
-            [{
+            {
                 "user_id": user_id,
                 "quantity": quantity,
                 "nutrient": goal.value,
-            }]
+            }
         ).one_or_none()
 
         status = "updated" if search_result else "error; please try again."
@@ -211,10 +213,10 @@ def delete_goal(user_id: int, goal: GoalCategory):
                 RETURNING 1
                 """
             ),
-            [{
+            {
                 "user_id": user_id,
                 "nutrient": goal.value
-            }]
+            }
         ).one_or_none()
 
         status = "deleted" if result else "error; please try again."

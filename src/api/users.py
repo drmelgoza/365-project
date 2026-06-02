@@ -34,7 +34,9 @@ def validate_user(user_id: int) -> bool:
                 WHERE id = :user_id
                 """
             ),
-            [{"user_id": user_id}]
+            {
+                "user_id": user_id
+            }
         ).one_or_none()
 
         return True if user_result else False
@@ -50,9 +52,9 @@ def validate_item(item_id: int) -> bool:
                 WHERE id = :item_id
                 """
             ),
-            [{
+            {
                 "item_id": item_id,
-            }]
+            }
         ).one_or_none()
 
         return True if item_result else False
@@ -68,10 +70,10 @@ def validate_goal(user_id: int, goal:str) -> bool:
                 AND nutrient = :goal
                 """
             ),
-            [{
+            {
                 "user_id": user_id,
                 "goal": goal
-            }]
+            }
         ).one_or_none()
 
         return True if goal_result else False
@@ -115,7 +117,9 @@ def create_user(
                 WHERE email = :email
                 """
             ),
-            [{"email": email}]
+            {
+                "email": email
+            }
         ).one_or_none()
 
         if existing:
@@ -153,7 +157,7 @@ def create_user(
                 RETURNING id
                 """
             ),
-            [{
+            {
                 "username": username,
                 "name": name,
                 "email": email,
@@ -162,7 +166,7 @@ def create_user(
                 "weight": weight,
                 "weight_unit": weight_unit,
                 "age": age,
-            }]
+            }
         ).one()
 
     return UserCreateResponse(user_id=new.id)
@@ -179,7 +183,9 @@ def get_user(user_id: int):
                 WHERE id = :user_id
                 """
             ),
-            [{"user_id": user_id}]
+            {
+                "user_id": user_id
+            }
         ).one_or_none()
 
         if not result:
@@ -242,9 +248,9 @@ def update_user(
                 WHERE id = :user_id
                 """
             ),
-            [{
+            {
                 "user_id": user_id
-            }]
+            }
         ).one()
 
         if new_height:
@@ -325,9 +331,9 @@ def delete_user(user_id: int):
                 RETURNING 1
                 """
             ),
-            [{
+            {
                 "user_id": user_id,
-            }]
+            }
         ).one_or_none()
 
         status = "deleted" if result else "error; please try again."

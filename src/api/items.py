@@ -22,7 +22,9 @@ def validate_user(user_id: int) -> bool:
                 WHERE id = :user_id
                 """
             ),
-            [{"user_id": user_id}]
+            {
+                "user_id": user_id
+            }
         ).one_or_none()
 
         return True if user_result else False
@@ -37,9 +39,9 @@ def validate_item(item_id: int) -> bool:
                 WHERE id = :item_id
                 """
             ),
-            [{
+            {
                 "item_id": item_id,
-            }]
+            }
         ).one_or_none()
 
         return True if item_result else False
@@ -88,14 +90,14 @@ def add_food_item(user_id: int, new_item: FoodItem):
                 RETURNING id
                 """
             ),
-            [{
+            {
                 "user_id": user_id,
                 "name": new_item.name,
                 "calories": new_item.calories,
                 "protein": new_item.protein,
                 "carbs": new_item.carbs,
                 "fat": new_item.fat,
-            }]
+            }
         ).one_or_none()
 
         status = "created" if item_result else "error; please try again"
@@ -134,9 +136,9 @@ def get_food_items(user_id: int):
                 WHERE user_id = :user_id
                 """
             ),
-            [{
+            {
                 "user_id": user_id
-            }]
+            }
         ).all()
 
         items = []
@@ -155,7 +157,7 @@ def get_food_items(user_id: int):
 class ItemPatchResponse(BaseModel):
     item_id: int
     user_id: int
-    changed_values: dict[str, float]
+    changed_values: dict[str, float|str]
     status: str
 
 
@@ -177,6 +179,8 @@ def update_food_item(
     valid_item = validate_item(item_id)
     if not valid_item:
         raise HTTPException(status_code=404, detail="Item does not exist.")
+
+    print("here")
 
     check_calories = not new_calories or new_calories > 0
     check_protein = not new_protein or new_protein > 0
@@ -200,6 +204,8 @@ def update_food_item(
 
     changed_values = {}
 
+    print("here")
+
     if new_name:
         query = query.values(name=new_name)
         changed_values["name"] = new_name
@@ -219,6 +225,8 @@ def update_food_item(
     if new_fat:
         query = query.values(fat=new_fat)
         changed_values["fat"] = new_fat
+
+    print("here")
 
     with db.engine.begin() as connection:
         result = connection.execute(query.returning(1)).one_or_none()
@@ -248,10 +256,10 @@ def delete_food_item(user_id: int, item_id: int):
                 RETURNING id
                 """
             ),
-            [{
+            {
                 "user_id": user_id,
                 "item_id": item_id
-            }]
+            }
         ).one_or_none()
 
         status = "deleted" if result else "error; please try again"

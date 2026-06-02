@@ -23,7 +23,9 @@ def validate_user(user_id: int) -> bool:
                 WHERE id = :user_id
                 """
             ),
-            [{"user_id": user_id}]
+            {
+                "user_id": user_id
+            }
         ).one_or_none()
 
         return True if user_result else False
@@ -39,7 +41,9 @@ def validate_log(log_id: int) -> bool:
                 WHERE id = :log_id
                 """
             ),
-            [{"log_id": log_id}]
+            {
+                "log_id": log_id
+            }
         ).one_or_none()
 
         return True if log_result else False
@@ -54,9 +58,9 @@ def validate_item(item_id: int) -> bool:
                 WHERE id = :item_id
                 """
             ),
-            [{
+            {
                 "item_id": item_id,
-            }]
+            }
         ).one_or_none()
 
         return True if item_result else False
@@ -113,11 +117,11 @@ def create_meal_log(user_id: int, category: MealCategory, log_date: date=date.to
                 RETURNING id
                 """
             ),
-            [{
+            {
                 "user_id": user_id,
                 "date": log_date,
                 "category": category.value
-            }]
+            }
         ).one_or_none()
 
         status = "created" if result else "error; please try again."
@@ -268,10 +272,10 @@ def delete_meal_log(user_id: int, log_id: int):
                 RETURNING 1
                 """
             ),
-            [{
+            {
                 "user_id": user_id,
                 "log_id": log_id
-            }]
+            }
         ).one_or_none()
 
         status = "deleted" if result else "error; please try again."
@@ -303,10 +307,12 @@ def add_item_to_log(user_id: int, log_id: int, item_id: int, quantity: int = 1, 
                 VALUES (:log_id, :item_id, :quantity, :unit)
                 """
             ),
-            {"log_id": log_id,
-             "item_id": item_id,
-             "quantity": quantity,
-             "unit": unit}
+            {
+                "log_id": log_id,
+                "item_id": item_id,
+                "quantity": quantity,
+                "unit": unit
+            }
         )
 
     return LogItemResponse(user_id=user_id, log_id=log_id, item_id=item_id, status="logged")
@@ -338,7 +344,10 @@ def remove_item_from_log(user_id:int, log_id: int, item_id: int):
                 AND item_id = :item_id
                 """
             ),
-            [{"log_id": log_id, "item_id": item_id}]
+            {
+                "log_id": log_id,
+                "item_id": item_id
+            }
         )
 
         #return 404 if the item was never in this log

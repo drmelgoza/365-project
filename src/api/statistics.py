@@ -38,7 +38,9 @@ def get_daily_summary(user_id: int, summary_date: date=date.today()):
                 WHERE id = :user_id
                 """
             ),
-            [{"user_id": user_id}]
+            {
+                "user_id": user_id
+            }
         ).one_or_none()
 
         if not result:
@@ -57,7 +59,10 @@ def get_daily_summary(user_id: int, summary_date: date=date.today()):
                 WHERE user_logs.user_id = :user_id AND date = :summary_date
                 """
             ),
-            [{"user_id": user_id, "summary_date":summary_date}]
+            {
+                "user_id": user_id,
+                "summary_date":summary_date
+            }
         ).one_or_none()
 
         if not macro_totals:
@@ -76,7 +81,9 @@ def get_daily_summary(user_id: int, summary_date: date=date.today()):
                 WHERE user_id = :user_id
                 """
             ),
-            [{"user_id": user_id}]
+            {
+                "user_id": user_id
+            }
         ).all()
 
         protein_goal = -1
