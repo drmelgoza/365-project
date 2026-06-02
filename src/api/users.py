@@ -24,22 +24,6 @@ class HeightUnits(str, Enum):
     cm = "cm"
     ft = "ft/in"
 
-#create_user models
-class User(BaseModel):
-    username: str
-    name: str
-    email: EmailStr
-    height: str
-    height_unit: str
-    weight: float = Field(ge=0)
-    weight_unit: str
-    age: int = Field(ge=0)
-
-
-class UserCreateResponse(BaseModel):
-    user_id: int
-
-
 def validate_user(user_id: int) -> bool:
     with db.engine.begin() as connection:
         user_result = connection.execute(
@@ -54,6 +38,7 @@ def validate_user(user_id: int) -> bool:
         ).one_or_none()
 
         return True if user_result else False
+
 
 def validate_item(item_id: int) -> bool:
     with db.engine.begin() as connection:
@@ -90,6 +75,21 @@ def validate_goal(user_id: int, goal:str) -> bool:
         ).one_or_none()
 
         return True if goal_result else False
+
+#create_user models
+class User(BaseModel):
+    username: str
+    name: str
+    email: EmailStr
+    height: str
+    height_unit: str
+    weight: float = Field(ge=0)
+    weight_unit: str
+    age: int = Field(ge=0)
+
+
+class UserCreateResponse(BaseModel):
+    user_id: int
 
 
 @router.post("/", response_model=UserCreateResponse)
