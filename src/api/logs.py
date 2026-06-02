@@ -85,11 +85,13 @@ class MealCategory(str, Enum):
     supper = "supper"
 
 
-class LogCreationResponse(BaseModel):
+class LogResponse(BaseModel):
+    user_id: int
     log_id: int
+    status: str
 
 
-@router.post("/{user_id}/logs", response_model=LogCreationResponse)
+@router.post("/{user_id}/logs", response_model=LogResponse)
 def create_meal_log(user_id: int, category: MealCategory, log_date: date=date.today()):
 
     valid_user = validate_user(user_id)
@@ -116,9 +118,11 @@ def create_meal_log(user_id: int, category: MealCategory, log_date: date=date.to
                 "date": log_date,
                 "category": category.value
             }]
-        ).one()
+        ).one_or_none()
 
-    return LogCreationResponse(log_id=result.id)
+        status = "created" if result else "error; please try again."
+
+    return LogResponse(user_id=user_id, log_id=result.id, status=status)
 
 
 class LoggedItem(BaseModel):
@@ -141,11 +145,11 @@ class LogsByDay(BaseModel):
     logs: list[LogsByCategory]
 
 
-class MealLogResponse(BaseModel):
+class GetLogResponse(BaseModel):
     results: list[LogsByDay]
 
 
-@router.get("/{user_id}/logs", response_model=MealLogResponse)
+@router.get("/{user_id}/logs", response_model=GetLogResponse)
 def get_meal_logs(user_id: int, log_id: int = None, log_date:date = None, log_category:MealCategory=None):
     metadata_obj = sqlalchemy.MetaData()
     log_items = sqlalchemy.Table("log_items", metadata_obj, autoload_with=db.engine)
@@ -228,7 +232,7 @@ def get_meal_logs(user_id: int, log_id: int = None, log_date:date = None, log_ca
 
 
 
-        return MealLogResponse(
+        return GetLogResponse(
             results=logs_list,
         )
 
@@ -237,16 +241,14 @@ def get_meal_logs(user_id: int, log_id: int = None, log_date:date = None, log_ca
 class NewLogItems(BaseModel):
     item_ids: list[int]
 
-class LogUpdateResponse(BaseModel):
-    status: str
-
-class LogDeleteResponse(BaseModel):
+class LogItemResponse(BaseModel):
     user_id: int
     log_id: int
+    item_id: int
     status: str
 
 
-@router.delete("/{user_id}/logs/{log_id}", response_model=LogDeleteResponse)
+@router.delete("/{user_id}/logs/{log_id}", response_model=LogResponse)
 def delete_meal_log(user_id: int, log_id: int):
     valid_user = validate_user(user_id)
     if not valid_user:
@@ -274,10 +276,10 @@ def delete_meal_log(user_id: int, log_id: int):
 
         status = "deleted" if result else "error; please try again."
 
-        return LogDeleteResponse(user_id=user_id, log_id=log_id, status=status)
+        return LogResponse(user_id=user_id, log_id=log_id, status=status)
 
 
-@router.post("/{user_id}/logs/{log_id}/items", response_model=LogUpdateResponse)
+@router.post("/{user_id}/logs/{log_id}/items", response_model=LogItemResponse)
 def add_item_to_log(user_id: int, log_id: int, item_id: int, quantity: int = 1, unit: str = 'handful'):
     """Add a food item to an existing meal log."""
     valid_user = validate_user(user_id)
@@ -307,7 +309,7 @@ def add_item_to_log(user_id: int, log_id: int, item_id: int, quantity: int = 1, 
              "unit": unit}
         )
 
-    return LogUpdateResponse(status="logged")
+    return LogItemResponse(user_id=user_id, log_id=log_id, item_id=item_id, status="logged")
 
 
 class ItemDeleteResponse(BaseModel):
@@ -317,7 +319,7 @@ class ItemDeleteResponse(BaseModel):
     status: str
 
 
-@router.delete("/{user_id}/logs/{log_id}/items/{item_id}", response_model=ItemDeleteResponse)
+@router.delete("/{user_id}/logs/{log_id}/items/{item_id}", response_model=LogItemResponse)
 def remove_item_from_log(user_id:int, log_id: int, item_id: int):
     valid_user = validate_user(user_id)
     if not valid_user:
@@ -343,4 +345,4 @@ def remove_item_from_log(user_id:int, log_id: int, item_id: int):
         if result.rowcount == 0:
             raise HTTPException(status_code=404, detail=f"Item {item_id} not found in this log.")
 
-    return ItemDeleteResponse(user_id=user_id, log_id=log_id, item_id=item_id, status="deleted")
+    return LogItemResponse(user_id=user_id, log_id=log_id, item_id=item_id, status="deleted")
