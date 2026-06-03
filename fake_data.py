@@ -7,7 +7,7 @@ from datetime import date, timedelta
 import random
 
 def database_connection_url():
-    dotenv.load_dotenv("default.env")
+    dotenv.load_dotenv(".env")
     return os.environ.get("POSTGRES_URI")
 
 # Create a new DB engine based on our connection string

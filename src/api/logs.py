@@ -128,6 +128,7 @@ def get_meal_logs(user_id: int, log_id: int = None, log_date:date = None, log_ca
         .join(log_items, log_items.c.item_id == user_items.c.id)
         .join(user_logs, user_logs.c.id == log_items.c.log_id)
         .order_by(user_logs.c.date.desc())
+        .where(user_logs.c.user_id == user_id)
     )
 
     if log_id:
