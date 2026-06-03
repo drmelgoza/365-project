@@ -112,6 +112,7 @@ class UserPlansRemovePlanResponse(BaseModel):
 class UserMacro(BaseModel):
     name: str
     type: float
+    unit: str
 
 
     
@@ -501,7 +502,7 @@ def item_tracker_per_category(user_id: int, macro: Macro, category: CategoryType
         tracker = conn.execute(
             sqlalchemy.text(
                 f"""
-                select  user_items.user_id, name, {mac} as type
+                select  user_items.user_id, name, {mac} as type, unit
                 from user_items
                 JOIN log_items
                 ON user_items.id = log_items.item_id
@@ -519,7 +520,8 @@ def item_tracker_per_category(user_id: int, macro: Macro, category: CategoryType
         for item in tracker:
             food = UserMacro(
                 name= item.name,
-                type= item.type
+                type= item.type,
+                unit= item.unit
             )
             list_of_macro.append(food)
         
