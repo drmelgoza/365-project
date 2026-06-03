@@ -78,6 +78,23 @@ def validate_goal(user_id: int, goal:str) -> bool:
 
         return True if goal_result else False
 
+def validate_log(log_id: int) -> bool:
+    with db.engine.begin() as connection:
+        log_result = connection.execute(
+            sqlalchemy.text(
+                """
+                SELECT 1
+                FROM user_logs
+                WHERE id = :log_id
+                """
+            ),
+            {
+                "log_id": log_id
+            }
+        ).one_or_none()
+
+        return True if log_result else False
+
 #create_user models
 class User(BaseModel):
     username: str

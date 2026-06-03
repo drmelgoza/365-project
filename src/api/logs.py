@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field
 import sqlalchemy
 from src.api import auth
 from src import database as db
+from src.api.users import validate_user, validate_item, validate_log
 from datetime import date
 from enum import Enum
 
@@ -12,58 +13,6 @@ router = APIRouter(
     tags=["user meal logs"],
     dependencies=[Depends(auth.get_api_key)],
 )
-
-def validate_user(user_id: int) -> bool:
-    with db.engine.begin() as connection:
-        user_result = connection.execute(
-            sqlalchemy.text(
-                """
-                SELECT 1
-                FROM users
-                WHERE id = :user_id
-                """
-            ),
-            {
-                "user_id": user_id
-            }
-        ).one_or_none()
-
-        return True if user_result else False
-
-
-def validate_log(log_id: int) -> bool:
-    with db.engine.begin() as connection:
-        log_result = connection.execute(
-            sqlalchemy.text(
-                """
-                SELECT 1
-                FROM user_logs
-                WHERE id = :log_id
-                """
-            ),
-            {
-                "log_id": log_id
-            }
-        ).one_or_none()
-
-        return True if log_result else False
-
-def validate_item(item_id: int) -> bool:
-    with db.engine.begin() as connection:
-        item_result = connection.execute(
-            sqlalchemy.text(
-                """
-                SELECT 1
-                FROM user_items
-                WHERE id = :item_id
-                """
-            ),
-            {
-                "item_id": item_id,
-            }
-        ).one_or_none()
-
-        return True if item_result else False
 
 
 class LoggedMealItem(BaseModel):

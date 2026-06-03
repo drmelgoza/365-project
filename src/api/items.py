@@ -3,48 +3,13 @@ from pydantic import BaseModel, Field
 import sqlalchemy
 from src.api import auth
 from src import database as db
+from src.api.users import validate_user, validate_item
 
 router = APIRouter(
     prefix="/users",
     tags=["user food items"],
     dependencies=[Depends(auth.get_api_key)],
 )
-
-#helper functions
-
-def validate_user(user_id: int) -> bool:
-    with db.engine.begin() as connection:
-        user_result = connection.execute(
-            sqlalchemy.text(
-                """
-                SELECT 1
-                FROM users
-                WHERE id = :user_id
-                """
-            ),
-            {
-                "user_id": user_id
-            }
-        ).one_or_none()
-
-        return True if user_result else False
-
-def validate_item(item_id: int) -> bool:
-    with db.engine.begin() as connection:
-        item_result = connection.execute(
-            sqlalchemy.text(
-                """
-                SELECT 1
-                FROM user_items
-                WHERE id = :item_id
-                """
-            ),
-            {
-                "item_id": item_id,
-            }
-        ).one_or_none()
-
-        return True if item_result else False
 
 
 #food item models
@@ -180,8 +145,6 @@ def update_food_item(
     if not valid_item:
         raise HTTPException(status_code=404, detail="Item does not exist.")
 
-    print("here")
-
     check_calories = not new_calories or new_calories > 0
     check_protein = not new_protein or new_protein > 0
     check_carbs = not new_carbs or new_carbs > 0
@@ -204,8 +167,6 @@ def update_food_item(
 
     changed_values = {}
 
-    print("here")
-
     if new_name:
         query = query.values(name=new_name)
         changed_values["name"] = new_name
@@ -225,8 +186,6 @@ def update_food_item(
     if new_fat:
         query = query.values(fat=new_fat)
         changed_values["fat"] = new_fat
-
-    print("here")
 
     with db.engine.begin() as connection:
         result = connection.execute(query.returning(1)).one_or_none()

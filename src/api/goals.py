@@ -4,48 +4,13 @@ from pydantic import BaseModel
 import sqlalchemy
 from src.api import auth
 from src import database as db
+from src.api.users import validate_user, validate_goal
 
 router = APIRouter(
     prefix="/users",
     tags=["user macro goals"],
     dependencies=[Depends(auth.get_api_key)],
 )
-
-def validate_user(user_id: int) -> bool:
-    with db.engine.begin() as connection:
-        user_result = connection.execute(
-            sqlalchemy.text(
-                """
-                SELECT 1
-                FROM users
-                WHERE id = :user_id
-                """
-            ),
-            {
-                "user_id": user_id
-            }
-        ).one_or_none()
-
-        return True if user_result else False
-
-def validate_goal(user_id: int, goal: str) -> bool:
-    with db.engine.begin() as connection:
-        goal_result = connection.execute(
-            sqlalchemy.text(
-                """
-                SELECT 1
-                FROM user_goals
-                WHERE user_id = :user_id
-                  AND nutrient = :goal
-                """
-            ),
-            {
-                "user_id": user_id,
-                "goal": goal
-            }
-        ).one_or_none()
-
-        return True if goal_result else False
 
 
 # macro_goal_models
