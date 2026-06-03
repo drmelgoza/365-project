@@ -83,9 +83,9 @@ invalid operations from being performed on non-existent entries in the database.
 4. `PATCH` endpoints now return information about the values being changed for the specified resource.
 5. `DELETE` endpoints now return the id of the resource that was deleted.
 6. timestamps have been removed from the API, and all dates are now stored in one YYYY-MM-DD formatted column.
-7. (Address idempotency here)
+7. (Unable to address.)
 8. Logs are now consistently nested under the URI prefix `users/{user_id}/logs`.
-9. (Address GET plan endpoints here)
+9. Plans are now retrievable through one function that combines the functionality of the two previous renditions.
 10. Food items are made and stored in a personal directory using the `POST users/{user_id}/items` endpoint. They can be later referenced as part of meal logs or meal plans using other endpoints. This prevents users from having to repeat information for the same food item across multiple plans or logs.
-11. (Address when plans are updated here)
-12. (Address when plans are updated here)
+11. Plan endpoints have now been standardized to follow a `plans/{user_id}` prefix.
+12. Plans are now retrievable through `/plans/{user_id}/plan` which can either retrieve all plans in bulk or return plans given a filter request.
