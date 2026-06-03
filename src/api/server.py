@@ -12,7 +12,7 @@ tags_metadata = [
     {"name": "user food items", "description": "Manage Items used for Logging and Planning"},
     {"name": "user macro goals", "description": "Manage macro goals"},
     {"name": "user meal logs", "description": "Manage Meal Logs and Logged Items"},
-    {"name": "plans", "description": "Manage Meal Plans and Logged Items"},
+    {"name": "user meal plans", "description": "Manage Meal Plans and Logged Items"},
 ]
 
 app = FastAPI(
