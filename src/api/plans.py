@@ -14,22 +14,11 @@ class Macro(str, Enum):
 
     def __str__(self):
         return self.value
-
-
-class Category(str, Enum):
-    breakfast = "breakfast"
-    lunch = "lunch"
-    dinner = "dinner"
-    snack = "snack"
-    supper = "supper"
-
-    def __str__(self):
-        return self.value
  
 
 router = APIRouter(
-    prefix="/plans",
-    tags=["plans"],
+    prefix="/users",
+    tags=["user meal plans"],
     dependencies=[Depends(auth.get_api_key)],
 )
 
@@ -47,6 +36,9 @@ class CategoryType(str, Enum):
     dinner = "dinner",
     snack = "snack",
     supper = "supper"
+
+    def __str__(self):
+        return self.value
 
 class DayType(str, Enum):
     monday = "monday",
@@ -484,7 +476,7 @@ def remove_plan(user_id: int, plan_id: int):
 ###ADDED an API that matches a person with other people who share the same meal_plan 
 
 @router.get("/{user_id}/item_per_category", response_model=list[UserMacro])
-def item_tracker_per_category(user_id: int, macro: Macro, category: Category): 
+def item_tracker_per_category(user_id: int, macro: Macro, category: CategoryType):
     with db.engine.begin() as conn:
         user_result = conn.execute(
             sqlalchemy.text(

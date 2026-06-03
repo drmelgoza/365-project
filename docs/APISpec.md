@@ -419,19 +419,6 @@ Remove a specific a meal log for a user. Items that existed in the meal log will
 ### Error Responses
 
 - `404 Not Found`: User or Log does not exist.
-
----
-
-# 4. Meal Plans
-
-Meal plans let users organize recurring eating schedules.
-
-## Flow Order
-
-1. Create Plan
-2. Get All Plans
-3. Delete Plan (if needed)
-
 ## 4.1 Create Plan — `POST /plans/{user_id}/plan`
 
 ### Request

@@ -21,13 +21,13 @@ that a majority of endpoints work as intended.
 1. Meal Log dates are now recorded in a single date column called `date` in the `user_logs` table.
 2. Meal plans and Meal logs now implement quantities. The macronutrient counts in the `user_items` table are considered to be for a single serving, and serving size can be adjusted when adding the item to a meal log or meal plan.
 3. Constraints are now placed on numeric values (user health info, food item macronutrient info). Date and email values are properly constrained, and macronutrient and plan types only use a set of acceptable values.
-4. (Insert here when plans are updated)
-5. (Insert here when plans are updated)
+4. Meal plans now support multiple plans per user instead of only returning a single hidden plan.
+5. Meal plan routes are now nested under `users/{user_id}/plans`, making ownership clearer and showing that plans belong to users.
 6. Meal Log management is now completely nested under the same prefix `users/{user_id}/logs`.
 7. The endpoint `GET users/{user_id}/items` has been added to allow users to view their personal list of food items.
 8. All user owned resources (food_items, goals, logs and plans) are all now located under the endpoint prefix `users/{user_id}`. As suggested, this shows that these resources are directly tied to a user.
 9. Users can now be deleted using `DELETE /users/{user_id}` and items can now be deleted using `DELETE users/{user_id}`.
-10. Food items can now be edited with `PATCH /users/{user_id}/items/{item_id}`, and (insert here when plans are updated)
+10. Food items can now be edited with `PATCH /users/{user_id}/items/{item_id}`, and meal plans can now be revised with `PATCH /users/{user_id}/plans/{plan_id}`.
 11. User log history can now be retrieved with `GET /users/{user_id}/logs`. This endpoint functions as a search page, allowing multiple optional search parameters, such as meal category, date, and the log_id.
 12. The FastAPI website sections are now organized by resource. For consistency, all sections are organized in `POST`, `GET`, `PATCH`, `DELETE` order, with some endpoint types being omitted as needed.
 ---
@@ -58,10 +58,10 @@ represent multiple servings of the same food item within a single meal log.
 6. Meal log time has been removed to avoid redundancy with the already established meal categories (Breakfast, Lunch, Dinner, etc.)
 7. Meal log categories have now been standardized to avoid inconsistent values that would complicate sorting and grouping. The established categories are `["breakfast", "lunch", "dinner", "snack", "supper"]` 
 8. User item macronutrients now are constrained to positive integer or float values.
-9. User health stats now include units for height and weight. Users have the option of inputting weight in `kg` or `lbs`, as well as the option of inputting height in `cm` or `ft/in` (For `ft/in` specifically, the user has the option to input `68` to represent 68", or `5'8"` to represent 68". `cm` only accepts a pure integer value)
+9. The previous get-by-day/category plan endpoints have been consolidated into user-owned plan endpoints with optional query parameters when filtering is needed.
 10. User age is now set as an `integer` column.
-11. Meal logs are now directly tied to users, now using the URI prefix `users/{user_id}/logs/`.
-12. Meal logs now accept a quantity for the Food Item being inputted. This means that Food Items are treated as a single unit, with the proper macronutrient totals being calculated by multiplying the unit value by the quantity listed.
+11. Plan endpoints are now structured as `users/{user_id}/plans`, `users/{user_id}/plans/{plan_id}`, and `users/plans/{user_id}/{plan_id}/items` to make it clear that plans belong to users.
+12. Users can now retrieve all of their plans with `GET /users/{user_id}/plans`.
 
 ---
 
